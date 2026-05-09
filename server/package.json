@@ -1,0 +1,21 @@
+{
+  "name": "clinicvoice-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js",
+    "test:storage": "node storage.js",
+    "test:claude": "node claude.js",
+    "test:functions": "node functions.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "@google/genai": "^1.32.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mongoose": "^9.6.2",
+    "ws": "^8.18.3"
+  }
+}
