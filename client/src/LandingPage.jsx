@@ -55,14 +55,10 @@ export default function LandingPage() {
       <div className="landing-languages">
         <p className="landing-languages-label">Supported languages</p>
         <div className="landing-languages-chips">
-          {[
-            '🇺🇸 English', '🇪🇸 Español', '🇨🇳 中文', '🇮🇳 हिन्दी', '🇻🇳 Tiếng Việt',
-            '🇵🇹 Português', '🇰🇷 한국어', '🇸🇦 العربية', '🇷🇺 Русский', '🇫🇷 Français',
-            '🇯🇵 日本語', '🇵🇭 Filipino', '🇮🇳 ਪੰਜਾਬੀ', '🇮🇳 বাংলা', '🇮🇩 Bahasa',
-          ].map((lang) => (
-            <span key={lang} className="lang-chip">{lang}</span>
+          {['🇺🇸 English', '🇮🇳 हिन्दी', '🇨🇳 中文', '🇪🇸 Español'].map((lang) => (
+            <span key={lang} className="lang-chip lang-chip-primary">{lang}</span>
           ))}
-          <span className="lang-chip lang-chip-more">+ many more</span>
+          <span className="lang-chip lang-chip-more">+ 70 more languages</span>
         </div>
       </div>
 

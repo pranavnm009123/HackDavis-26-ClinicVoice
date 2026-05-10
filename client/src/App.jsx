@@ -1795,11 +1795,12 @@ dd {
 .landing-ctas .btn-primary:hover { background: var(--aggie-gold); color: var(--aggie-blue); border-color: var(--aggie-gold); }
 .landing-ctas .btn-ghost { background: transparent; color: #fff; font-weight: 700; font-size: 1rem; padding: 14px 32px; border-radius: 30px; border: 2px solid #fff; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
 .landing-ctas .btn-ghost:hover { background: var(--aggie-gold); color: var(--aggie-blue); border-color: var(--aggie-gold); }
-.landing-languages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 24px 32px; }
+.landing-languages { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 8px 24px 36px; }
 .landing-languages-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin: 0; }
-.landing-languages-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 760px; }
-.lang-chip { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); border-radius: 20px; padding: 5px 14px; font-size: 0.82rem; color: rgba(255,255,255,0.85); white-space: nowrap; }
-.lang-chip-more { background: rgba(255,204,0,0.15); border-color: rgba(255,204,0,0.35); color: var(--aggie-gold); font-weight: 600; }
+.landing-languages-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 760px; }
+.lang-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 30px; padding: 9px 22px; font-size: 1rem; font-weight: 600; white-space: nowrap; cursor: default; }
+.lang-chip-primary { background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.3); color: #fff; letter-spacing: 0.01em; }
+.lang-chip-more { background: var(--aggie-gold); border: 2px solid var(--aggie-gold); color: var(--aggie-blue); font-weight: 700; }
 .landing-features { display: grid; grid-template-columns: repeat(4, minmax(0, 220px)); justify-content: center; gap: 20px; padding: 16px 40px 60px; max-width: 1100px; margin: -18px auto 0; width: 100%; }
 .landing-feature { display: flex; flex-direction: column; justify-content: flex-start; min-height: 220px; background: rgba(255,255,255,0.07); border-radius: 14px; padding: 24px; text-align: center; }
 .landing-feature h3 { display: flex; align-items: flex-start; justify-content: center; min-height: 52px; font-size: 1rem; font-weight: 700; margin: 0 0 10px; color: var(--aggie-gold); line-height: 1.3; text-wrap: balance; }
