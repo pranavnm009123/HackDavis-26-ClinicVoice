@@ -139,6 +139,45 @@ function extractDraft(msgs, mode) {
   return f;
 }
 
+const ModeIcon = ({ type }) => {
+  if (type === 'clinic') {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden>
+        <path d="M6 18.5c0-6.5 7.9-9.1 10-3.6 2.1-5.5 10-2.9 10 3.6 0 5.6-6.3 8.6-10 10.7-3.7-2.1-10-5.1-10-10.7z" />
+        <path d="M16 10v10M11 15h10" />
+      </svg>
+    );
+  }
+
+  if (type === 'shelter') {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden>
+        <path d="M5 15.5 16 6l11 9.5" />
+        <path d="M8.5 14.8V27h15V14.8" />
+        <path d="M13 27v-7h6v7" />
+      </svg>
+    );
+  }
+
+  if (type === 'food_aid') {
+    return (
+      <svg viewBox="0 0 32 32" aria-hidden>
+        <path d="M7 15h18c0 5.5-4 10-9 10s-9-4.5-9-10z" />
+        <path d="M10 25h12" />
+        <path d="M11 10c0-2 2-3 2-5M16 10c0-2 2-3 2-5M21 10c0-2 2-3 2-5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden>
+      <path d="M16 4.5c3.8 3.2 7 7.7 7 13A7 7 0 0 1 9 17.5c0-5.3 3.2-9.8 7-13z" />
+      <path d="M16 13v8M12 17h8" />
+      <path d="M7 26h18" />
+    </svg>
+  );
+};
+
 const modes = [
   { id: 'clinic', label: 'Healthcare', description: 'Symptoms, duration, urgency, accessibility, insurance, next step.' },
   { id: 'shelter', label: 'Housing', description: 'Housing status, safety, family size, pets, mobility, bed/resource need.' },
@@ -637,7 +676,12 @@ export default function PatientView() {
                   type="button"
                   onClick={() => setMode(item.id)}
                 >
-                  <strong>{item.label}</strong>
+                  <span className="mode-title-row">
+                    <span className="mode-icon">
+                      <ModeIcon type={item.id} />
+                    </span>
+                    <strong>{item.label}</strong>
+                  </span>
                   <span>{item.description}</span>
                 </button>
               ))}

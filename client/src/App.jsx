@@ -344,7 +344,6 @@ h2 {
 }
 
 .mode-option strong {
-  margin-bottom: 10px;
   font-size: 1.05rem;
 }
 
@@ -2696,6 +2695,46 @@ textarea:focus,
 .input-mode-btn,
 .mode-option {
   border-radius: calc(var(--radius) + 4px);
+}
+
+.mode-option .mode-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: inherit;
+}
+
+.mode-option .mode-icon {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(13, 39, 78, 0.08);
+  color: var(--aggie-blue);
+}
+
+.mode-option:hover .mode-icon,
+.mode-option:focus-visible .mode-icon,
+.mode-option.is-selected .mode-icon {
+  background: rgba(13, 39, 78, 0.12);
+  color: var(--aggie-blue);
+}
+
+.mode-option .mode-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.mode-option .mode-icon svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
 }
 
 .input-mode-btn:hover:not(:disabled),
