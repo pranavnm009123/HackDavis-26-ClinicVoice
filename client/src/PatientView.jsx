@@ -6,6 +6,7 @@ const modes = [
   { id: 'clinic', label: 'Free Clinic', description: 'Symptoms, duration, urgency, accessibility, insurance, next step.' },
   { id: 'shelter', label: 'Shelter', description: 'Housing status, safety, family size, pets, mobility, bed/resource need.' },
   { id: 'food_aid', label: 'Food Aid', description: 'Household size, diet needs, transport limits, zip code, supplies.' },
+  { id: 'support_services', label: 'Access & Support', description: 'Find care, shelter, or services you can actually reach — matched to your language, mobility, and transport needs.' },
 ];
 
 const TRANSCRIPT_MERGE_WINDOW_MS = 2200;

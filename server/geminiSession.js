@@ -19,7 +19,7 @@ const functionDeclarations = [
       properties: {
         mode: {
           type: Type.STRING,
-          enum: ['clinic', 'shelter', 'food_aid'],
+          enum: ['clinic', 'shelter', 'food_aid', 'support_services'],
         },
         level: {
           type: Type.STRING,
@@ -42,7 +42,7 @@ const functionDeclarations = [
       properties: {
         mode: {
           type: Type.STRING,
-          enum: ['clinic', 'shelter', 'food_aid'],
+          enum: ['clinic', 'shelter', 'food_aid', 'support_services'],
         },
         language: { type: Type.STRING },
         transcript: {
@@ -115,6 +115,30 @@ const functionDeclarations = [
         },
       },
       required: ['type', 'patient_city'],
+    },
+  },
+  {
+    name: 'check_resource_access',
+    description: "For Access & Support mode: check whether local facilities match the patient's accessibility needs before recommending one. Returns access score, matched needs, missing needs, and known barriers for the top 3 nearest matching facilities.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        needs: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Patient's accessibility needs as plain strings, e.g. [\"wheelchair\", \"spanish interpreter\", \"transportation\"]. Derive from their answers to mobility, language, and transport questions.",
+        },
+        facility_type: {
+          type: Type.STRING,
+          enum: ['clinic', 'free_clinic', 'hospital', 'shelter', 'food_bank', 'pharmacy', 'urgent_care'],
+          description: 'Type of facility to search. Use free_clinic for low-cost medical, hospital for ER, shelter for housing, food_bank for food aid.',
+        },
+        patient_city: {
+          type: Type.STRING,
+          description: 'City or zip code to sort results by proximity.',
+        },
+      },
+      required: ['needs', 'facility_type', 'patient_city'],
     },
   },
   {

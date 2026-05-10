@@ -120,7 +120,7 @@ export default function StaffView() {
         <div className="queue-header">
           <div>
             <p className="eyebrow">
-              {filters.mode === 'all' ? 'All categories' : filters.mode === 'food_aid' ? 'Food Aid' : filters.mode === 'clinic' ? 'Free Clinic' : 'Shelter'}
+              {filters.mode === 'all' ? 'All categories' : filters.mode === 'food_aid' ? 'Food Aid' : filters.mode === 'clinic' ? 'Free Clinic' : filters.mode === 'support_services' ? 'Access & Support' : 'Shelter'}
             </p>
             <h2>Intake requests</h2>
           </div>
@@ -144,6 +144,7 @@ export default function StaffView() {
             { value: 'clinic', label: 'Free Clinic' },
             { value: 'shelter', label: 'Shelter' },
             { value: 'food_aid', label: 'Food Aid' },
+            { value: 'support_services', label: 'Access & Support' },
           ].map(({ value, label }) => {
             const count = value === 'all' ? cards.length : cards.filter((c) => c.mode === value).length;
             return (

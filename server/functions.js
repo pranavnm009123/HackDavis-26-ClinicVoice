@@ -6,6 +6,7 @@ import * as doctorStorage from './doctors.js';
 import * as facilityStorage from './facilities.js';
 import { sendAppointmentConfirmation } from './email.js';
 import { matchResourcesWithBackboard, enrichIntakeWithBackboard, loadCuratedResourceGuide } from './backboardMatch.js';
+import { getFacilitiesWithScores, matchAccessibility } from './supportServices.js';
 
 function parseJsonish(value, fallback) {
   if (Array.isArray(value) || (value && typeof value === 'object')) {
@@ -315,6 +316,54 @@ export async function find_nearest_facility(args) {
   };
 }
 
+export async function check_resource_access(args) {
+  const { needs = [], facility_type, patient_city } = args;
+  const TYPE_MAP = {
+    clinic: 'free_clinic', free_clinic: 'free_clinic', hospital: 'hospital',
+    shelter: 'shelter', food_bank: 'food_bank', food: 'food_bank',
+    pharmacy: 'pharmacy', urgent_care: 'urgent_care',
+  };
+  const normalizedType = TYPE_MAP[facility_type] || null;
+  const allFacilities = await getFacilitiesWithScores();
+  const typed = normalizedType ? allFacilities.filter((f) => f.type === normalizedType) : allFacilities;
+
+  const coords = getPatientCoords(patient_city);
+  const sorted = coords
+    ? typed
+        .map((f) => ({
+          ...f,
+          _distKm: f.lat && f.lng
+            ? Math.round(facilityStorage.haversineKm(coords.lat, coords.lng, f.lat, f.lng) * 10) / 10
+            : 9999,
+        }))
+        .sort((a, b) => a._distKm - b._distKm)
+    : typed;
+
+  const results = sorted.slice(0, 3).map((facility) => {
+    const { matched, missing } = matchAccessibility(needs, facility);
+    return {
+      name: facility.name,
+      type: facility.type,
+      address: facility.address ? `${facility.address}, ${facility.city}, CA` : '',
+      phone: facility.phone || '',
+      hours: facility.hours || '',
+      access_score: facility.score ?? 0,
+      access_breakdown: facility.breakdown ?? {},
+      matched,
+      missing,
+      known_barriers: facility.known_barriers ?? [],
+      distance_label: coords && facility._distKm != null && facility._distKm < 9999
+        ? `${Math.round(facility._distKm * 0.621371 * 10) / 10} mi away`
+        : 'Distance unknown',
+    };
+  });
+
+  if (!results.length) {
+    return { results: [], note: 'No facilities of this type found. Staff should conduct a manual search.' };
+  }
+  return { results, patient_city: patient_city || 'Unknown', needs };
+}
+
 export async function book_appointment(args, broadcast, userContext = null) {
   const { slot_id, patient_name, reason, urgency, notes, intake_id } = args;
   const id = crypto.randomUUID();
@@ -375,6 +424,7 @@ export const handlers = {
   lookup_resources,
   get_available_slots,
   find_nearest_facility,
+  check_resource_access,
   book_appointment,
 };
 
