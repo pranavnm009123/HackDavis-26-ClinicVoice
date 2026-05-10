@@ -116,8 +116,10 @@ export default function StaffView() {
       <section className="queue-panel">
         <div className="queue-header">
           <div>
-            <p className="eyebrow">Universal case records</p>
-            <h2>Intake cards</h2>
+            <p className="eyebrow">
+              {filters.mode === 'all' ? 'All categories' : filters.mode === 'food_aid' ? 'Food Aid' : filters.mode === 'clinic' ? 'Free Clinic' : 'Shelter'}
+            </p>
+            <h2>Intake requests</h2>
           </div>
           <div className="queue-controls">
             <span className="status-pill">{filteredCards.length} shown · {cards.length} total</span>
@@ -133,16 +135,29 @@ export default function StaffView() {
           </div>
         </div>
 
-        <div className="filter-bar">
-          <select
-            value={filters.mode}
-            onChange={(event) => setFilters((current) => ({ ...current, mode: event.target.value }))}
-          >
-            <option value="all">All modes</option>
-            <option value="clinic">Clinic</option>
-            <option value="shelter">Shelter</option>
-            <option value="food_aid">Food aid</option>
-          </select>
+        <div className="category-tabs">
+          {[
+            { value: 'all', label: 'All requests' },
+            { value: 'clinic', label: 'Free Clinic' },
+            { value: 'shelter', label: 'Shelter' },
+            { value: 'food_aid', label: 'Food Aid' },
+          ].map(({ value, label }) => {
+            const count = value === 'all' ? cards.length : cards.filter((c) => c.mode === value).length;
+            return (
+              <button
+                key={value}
+                className={`category-tab cat-${value}${filters.mode === value ? ' active' : ''}`}
+                type="button"
+                onClick={() => setFilters((f) => ({ ...f, mode: value }))}
+              >
+                {label}
+                <span className="cat-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="filter-bar filter-bar-3col">
           <select
             value={filters.urgency}
             onChange={(event) => setFilters((current) => ({ ...current, urgency: event.target.value }))}

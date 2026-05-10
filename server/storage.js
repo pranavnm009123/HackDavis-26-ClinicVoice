@@ -140,6 +140,17 @@ export async function updateStatus(id, status) {
   return toClientRecord(updated);
 }
 
+export async function updateIntake(id, fields) {
+  await connectDatabase();
+  const updated = await Intake.findOneAndUpdate(
+    { id },
+    { $set: fields },
+    { new: true },
+  ).lean();
+
+  return toClientRecord(updated);
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   await connectDatabase();
   const record = await save({

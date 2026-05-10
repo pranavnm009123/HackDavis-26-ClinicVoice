@@ -2,97 +2,171 @@ import { useCallback, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSocket } from './useSocket.js';
 
+const BASE = `http://${window.location.hostname}:3001`;
 const URGENCY_COLORS = { CRITICAL: '#be2020', HIGH: '#d86d1f', MEDIUM: '#b38b08', LOW: '#3a7d5a' };
-const TYPE_LABELS = {
-  nurse_triage: 'Nurse Triage',
-  clinic_review: 'Clinic Review',
+const SPEC_LABELS = {
+  general_practice: 'General Practice',
+  cardiology: 'Cardiology',
+  social_work: 'Social Work',
+  pediatrics: 'Pediatrics',
+  psychiatry: 'Psychiatry',
   interpreter: 'Interpreter',
-  social_worker: 'Social Worker',
-  emergency_escalation: 'Emergency',
 };
-const TIME_ORDER = { ASAP: 0, Today: 1, 'Within 48h': 2, 'This week': 3 };
+const FACILITY_TYPE_LABELS = {
+  hospital: 'Hospital',
+  free_clinic: 'Free Clinic',
+  urgent_care: 'Urgent Care',
+  shelter: 'Shelter',
+  food_bank: 'Food Bank',
+  pharmacy: 'Pharmacy',
+};
+const FACILITY_TYPE_COLORS = {
+  hospital: '#be2020',
+  free_clinic: '#17382d',
+  urgent_care: '#d86d1f',
+  shelter: '#3a5a8a',
+  food_bank: '#6b5c2a',
+  pharmacy: '#4a3a6a',
+};
 
-const EMPTY_FORM = {
-  patient_name: '',
-  appointment_type: 'clinic_review',
-  urgency: 'MEDIUM',
-  reason: '',
-  suggested_time: 'This week',
-  notes: '',
-};
+const EMPTY_DOCTOR = { name: '', specialization: 'general_practice', phone: '', location: '', facility_id: '' };
+const EMPTY_SLOT = { date: '', time: '' };
+const EMPTY_FACILITY = { name: '', type: 'free_clinic', address: '', city: '', zip: '', phone: '', hours: '' };
 
 export default function AppointmentsView() {
   const [appointments, setAppointments] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [facilities, setFacilities] = useState([]);
   const [loadError, setLoadError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('bookings');
+
+  // Add doctor form
+  const [doctorForm, setDoctorForm] = useState(EMPTY_DOCTOR);
+  const [slots, setSlots] = useState([{ ...EMPTY_SLOT }]);
+  const [savingDoctor, setSavingDoctor] = useState(false);
+  const [doctorSuccess, setDoctorSuccess] = useState('');
+
+  // Add facility form
+  const [facilityForm, setFacilityForm] = useState(EMPTY_FACILITY);
+  const [savingFacility, setSavingFacility] = useState(false);
+  const [facilitySuccess, setFacilitySuccess] = useState('');
+
+  // Filters
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterUrgency, setFilterUrgency] = useState('all');
 
   useEffect(() => {
-    fetch(`http://${window.location.hostname}:3001/appointments`)
+    fetch(`${BASE}/appointments`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data) => setAppointments(Array.isArray(data) ? data : []))
       .catch((e) => setLoadError(e.message));
+
+    fetch(`${BASE}/doctors`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data) => setDoctors(Array.isArray(data) ? data : []))
+      .catch(() => {});
+
+    fetch(`${BASE}/facilities`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data) => setFacilities(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
   const handleSocketMessage = useCallback((message) => {
     if (message.type === 'NEW_APPOINTMENT') {
-      setAppointments((cur) => [message.appointment, ...cur]);
+      setAppointments((c) => {
+        if (c.some((a) => a.id === message.appointment.id)) return c;
+        return [message.appointment, ...c];
+      });
     }
-    if (message.type === 'APPOINTMENT_UPDATED') {
-      setAppointments((cur) =>
-        cur.map((a) => (a.id === message.appointment.id ? message.appointment : a)),
-      );
+    if (message.type === 'APPOINTMENT_UPDATED') setAppointments((c) => c.map((a) => a.id === message.appointment.id ? message.appointment : a));
+    if (message.type === 'SLOT_ADDED') {
+      setDoctors((c) => c.map((d) => d.id === message.slot.doctor_id ? { ...d, slots: [...(d.slots || []), message.slot] } : d));
+    }
+    if (message.type === 'SLOT_BOOKED') {
+      setDoctors((c) => c.map((d) => d.id === message.doctor_id
+        ? { ...d, slots: (d.slots || []).map((s) => s.id === message.slot_id ? { ...s, booked: true } : s) }
+        : d));
+    }
+    if (message.type === 'NEW_FACILITY') {
+      setFacilities((c) => [...c, message.facility]);
     }
   }, []);
 
   const { connected } = useSocket('/ws/staff', { onMessage: handleSocketMessage });
 
   async function updateStatus(id, status) {
-    setAppointments((cur) => cur.map((a) => (a.id === id ? { ...a, status } : a)));
-    await fetch(`http://${window.location.hostname}:3001/appointments/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+    setAppointments((c) => c.map((a) => a.id === id ? { ...a, status } : a));
+    await fetch(`${BASE}/appointments/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
   }
 
-  async function handleAdd(e) {
+  async function handleAddDoctor(e) {
     e.preventDefault();
-    setSaving(true);
+    setSavingDoctor(true);
+    setDoctorSuccess('');
     try {
-      const res = await fetch(`http://${window.location.hostname}:3001/appointments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const res = await fetch(`${BASE}/doctors`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(doctorForm),
       });
-      if (res.ok) {
-        setForm(EMPTY_FORM);
-        setShowForm(false);
-      }
-    } finally {
-      setSaving(false);
-    }
+      const doctor = await res.json();
+      const validSlots = slots.filter((s) => s.date && s.time);
+      await Promise.all(validSlots.map((s) =>
+        fetch(`${BASE}/doctors/${doctor.id}/slots`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(s),
+        })
+      ));
+      const fullRes = await fetch(`${BASE}/doctors`);
+      setDoctors(await fullRes.json());
+      setDoctorForm(EMPTY_DOCTOR);
+      setSlots([{ ...EMPTY_SLOT }]);
+      setDoctorSuccess(`Dr. ${doctor.name} added with ${validSlots.length} slot(s).`);
+    } finally { setSavingDoctor(false); }
   }
 
-  const filtered = appointments
-    .filter((a) => (filterStatus === 'all' || a.status === filterStatus) &&
-                   (filterUrgency === 'all' || a.urgency === filterUrgency))
-    .sort((a, b) => (TIME_ORDER[a.suggested_time] ?? 9) - (TIME_ORDER[b.suggested_time] ?? 9));
+  async function handleAddFacility(e) {
+    e.preventDefault();
+    setSavingFacility(true);
+    setFacilitySuccess('');
+    try {
+      const res = await fetch(`${BASE}/facilities`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(facilityForm),
+      });
+      const facility = await res.json();
+      setFacilityForm(EMPTY_FACILITY);
+      setFacilitySuccess(`${facility.name} added successfully.`);
+    } finally { setSavingFacility(false); }
+  }
+
+  async function handleAddSlot(doctorId) {
+    const date = prompt('Date (YYYY-MM-DD):');
+    const time = prompt('Time (e.g. 2:00 PM):');
+    if (!date || !time) return;
+    await fetch(`${BASE}/doctors/${doctorId}/slots`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, time }),
+    });
+    const res = await fetch(`${BASE}/doctors`);
+    setDoctors(await res.json());
+  }
+
+  const filtered = appointments.filter((a) =>
+    (filterStatus === 'all' || a.status === filterStatus) &&
+    (filterUrgency === 'all' || a.urgency === filterUrgency)
+  ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  const facilityMap = Object.fromEntries(facilities.map((f) => [f.id, f]));
 
   return (
     <main className="staff-shell">
       <header className="staff-header">
-        <div>
-          <p className="eyebrow">Staff dashboard</p>
-          <h1>VoiceBridge intake queue</h1>
-        </div>
-        <div className={connected ? 'connection is-live' : 'connection'}>
-          <span />
-          {connected ? 'Live' : 'Offline'}
-        </div>
+        <div><p className="eyebrow">Staff dashboard</p><h1>VoiceBridge intake queue</h1></div>
+        <div className={connected ? 'connection is-live' : 'connection'}><span />{connected ? 'Live' : 'Offline'}</div>
       </header>
 
       <nav className="staff-tabs">
@@ -101,129 +175,241 @@ export default function AppointmentsView() {
         <NavLink className={({ isActive }) => isActive ? 'staff-tab active' : 'staff-tab'} to="/staff/analytics">Analytics</NavLink>
       </nav>
 
-      <section className="queue-panel">
-        <div className="queue-header">
-          <div>
-            <p className="eyebrow">Bot-suggested + staff-added</p>
-            <h2>Appointments</h2>
-          </div>
-          <button className="add-appt-btn" type="button" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? 'Cancel' : '+ Add appointment'}
-          </button>
-        </div>
+      <div className="appt-page-tabs">
+        <button className={activeTab === 'bookings' ? 'appt-page-tab active' : 'appt-page-tab'} type="button" onClick={() => setActiveTab('bookings')}>
+          Booked appointments <span className="appt-count">{appointments.length}</span>
+        </button>
+        <button className={activeTab === 'doctors' ? 'appt-page-tab active' : 'appt-page-tab'} type="button" onClick={() => setActiveTab('doctors')}>
+          Doctors &amp; availability <span className="appt-count">{doctors.length}</span>
+        </button>
+        <button className={activeTab === 'facilities' ? 'appt-page-tab active' : 'appt-page-tab'} type="button" onClick={() => setActiveTab('facilities')}>
+          Facilities <span className="appt-count">{facilities.length}</span>
+        </button>
+        <button className={activeTab === 'add' ? 'appt-page-tab active' : 'appt-page-tab'} type="button" onClick={() => setActiveTab('add')}>
+          + Add doctor
+        </button>
+        <button className={activeTab === 'add-facility' ? 'appt-page-tab active' : 'appt-page-tab'} type="button" onClick={() => setActiveTab('add-facility')}>
+          + Add facility
+        </button>
+      </div>
 
-        {showForm && (
-          <form className="appt-form" onSubmit={handleAdd}>
-            <div className="appt-form-grid">
-              <label>
-                Patient name
-                <input required value={form.patient_name} onChange={(e) => setForm((f) => ({ ...f, patient_name: e.target.value }))} />
-              </label>
-              <label>
-                Type
-                <select value={form.appointment_type} onChange={(e) => setForm((f) => ({ ...f, appointment_type: e.target.value }))}>
-                  {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </label>
-              <label>
-                Urgency
-                <select value={form.urgency} onChange={(e) => setForm((f) => ({ ...f, urgency: e.target.value }))}>
-                  {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((u) => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </label>
-              <label>
-                Suggested time
-                <select value={form.suggested_time} onChange={(e) => setForm((f) => ({ ...f, suggested_time: e.target.value }))}>
-                  {['ASAP', 'Today', 'Within 48h', 'This week'].map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </label>
-              <label className="appt-form-wide">
-                Reason
-                <input required value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
-              </label>
-              <label className="appt-form-wide">
-                Notes
-                <input value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
-              </label>
+      {activeTab === 'bookings' && (
+        <section className="queue-panel">
+          <div className="queue-header">
+            <div><p className="eyebrow">Bot-confirmed patient appointments</p><h2>Bookings</h2></div>
+          </div>
+          <div className="filter-bar">
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
+              <option value="all">All urgency</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+          </div>
+          {loadError && <p className="inline-error">{loadError}</p>}
+          {filtered.length === 0 ? (
+            <div className="empty-state"><p>No appointments yet. They appear here when the bot books one with a patient.</p></div>
+          ) : (
+            <div className="appt-table-wrap">
+              <table className="appt-table">
+                <thead><tr>
+                  <th>Patient</th><th>Doctor</th><th>Specialization</th>
+                  <th>Facility</th><th>Date</th><th>Time</th>
+                  <th>Urgency</th><th>Reason</th><th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                  {filtered.map((a) => {
+                    const facility = facilityMap[a.facility_id];
+                    const facilityLabel = a.facility_name || facility?.name || a.location || '—';
+                    const facilityCity = facility?.city || '';
+                    return (
+                      <tr key={a.id} className="appt-row bot-row">
+                        <td className="appt-name">{a.patient_name}</td>
+                        <td>{a.doctor_name || '—'}</td>
+                        <td>{SPEC_LABELS[a.specialization] || a.specialization || '—'}</td>
+                        <td>
+                          <span className="facility-cell">
+                            {facilityLabel}
+                            {facilityCity && facilityLabel !== facilityCity && <span className="facility-city">{facilityCity}</span>}
+                          </span>
+                        </td>
+                        <td className="appt-time">{a.slot_date || '—'}</td>
+                        <td className="appt-time">{a.slot_time || '—'}</td>
+                        <td><span className="urgency-chip" style={{ background: URGENCY_COLORS[a.urgency] }}>{a.urgency}</span></td>
+                        <td className="appt-reason">{a.reason}</td>
+                        <td><span className={`appt-status ${a.status}`}>{a.status}</span></td>
+                        <td className="appt-actions">
+                          {a.status === 'confirmed' && <button type="button" onClick={() => updateStatus(a.id, 'completed')}>Complete</button>}
+                          {a.status !== 'cancelled' && a.status !== 'completed' && <button className="cancel-btn" type="button" onClick={() => updateStatus(a.id, 'cancelled')}>Cancel</button>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-            <button className="start-session-button" disabled={saving} type="submit">
-              {saving ? 'Saving…' : 'Save appointment'}
+          )}
+        </section>
+      )}
+
+      {activeTab === 'doctors' && (
+        <section className="queue-panel">
+          <div className="queue-header">
+            <div><p className="eyebrow">Available doctors and open slots</p><h2>Doctor availability</h2></div>
+          </div>
+          {doctors.length === 0 ? (
+            <div className="empty-state"><p>No doctors added yet.</p></div>
+          ) : (
+            <div className="doctor-grid">
+              {doctors.map((d) => {
+                const available = (d.slots || []).filter((s) => !s.booked);
+                const booked = (d.slots || []).filter((s) => s.booked);
+                const facility = facilityMap[d.facility_id];
+                return (
+                  <div key={d.id} className="doctor-card">
+                    <div className="doctor-card-header">
+                      <div>
+                        <p className="doctor-name">{d.name}</p>
+                        <p className="doctor-spec">{SPEC_LABELS[d.specialization] || d.specialization}</p>
+                        <p className="doctor-meta">
+                          {facility ? <><strong>{facility.name}</strong> · {facility.city}</> : d.location}
+                          {d.phone ? ` · ${d.phone}` : ''}
+                        </p>
+                      </div>
+                      <div className="slot-counts">
+                        <span className="slot-available">{available.length} open</span>
+                        <span className="slot-booked">{booked.length} booked</span>
+                      </div>
+                    </div>
+                    <div className="slot-list">
+                      {available.slice(0, 6).map((s) => (
+                        <span key={s.id} className="slot-chip available">{s.date} {s.time}</span>
+                      ))}
+                      {available.length > 6 && <span className="slot-chip more">+{available.length - 6} more</span>}
+                      {available.length === 0 && <span className="slot-chip none">No open slots</span>}
+                    </div>
+                    <button className="add-slot-btn" type="button" onClick={() => handleAddSlot(d.id)}>+ Add slot</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'facilities' && (
+        <section className="queue-panel">
+          <div className="queue-header">
+            <div><p className="eyebrow">Hospitals, clinics, shelters, and more</p><h2>Facility network</h2></div>
+          </div>
+          {facilities.length === 0 ? (
+            <div className="empty-state"><p>No facilities added yet.</p></div>
+          ) : (
+            <div className="doctor-grid">
+              {facilities.map((f) => {
+                const docCount = doctors.filter((d) => d.facility_id === f.id).length;
+                return (
+                  <div key={f.id} className="doctor-card">
+                    <div className="doctor-card-header">
+                      <div>
+                        <p className="doctor-name">{f.name}</p>
+                        <p className="doctor-spec">
+                          <span
+                            className="urgency-chip"
+                            style={{ background: FACILITY_TYPE_COLORS[f.type] || '#6b7a74', fontSize: 11 }}
+                          >
+                            {FACILITY_TYPE_LABELS[f.type] || f.type}
+                          </span>
+                        </p>
+                        <p className="doctor-meta">{f.address}, {f.city}{f.zip ? ` ${f.zip}` : ''}</p>
+                        <p className="doctor-meta">{f.phone}{f.hours ? ` · ${f.hours}` : ''}</p>
+                      </div>
+                      <div className="slot-counts">
+                        <span className="slot-available">{docCount} doctor{docCount !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'add' && (
+        <section className="queue-panel">
+          <div className="queue-header">
+            <div><p className="eyebrow">Add to doctor roster</p><h2>New doctor</h2></div>
+          </div>
+          <form className="appt-form" onSubmit={handleAddDoctor}>
+            <div className="appt-form-grid">
+              <label>Name<input required placeholder="Dr. Full Name" value={doctorForm.name} onChange={(e) => setDoctorForm((f) => ({ ...f, name: e.target.value }))} /></label>
+              <label>Specialization
+                <select value={doctorForm.specialization} onChange={(e) => setDoctorForm((f) => ({ ...f, specialization: e.target.value }))}>
+                  {Object.entries(SPEC_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </label>
+              <label>Facility
+                <select value={doctorForm.facility_id} onChange={(e) => setDoctorForm((f) => ({ ...f, facility_id: e.target.value }))}>
+                  <option value="">— Select facility —</option>
+                  {facilities.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.city})</option>)}
+                </select>
+              </label>
+              <label>Room / Office<input placeholder="Room 204" value={doctorForm.location} onChange={(e) => setDoctorForm((f) => ({ ...f, location: e.target.value }))} /></label>
+              <label>Phone<input placeholder="(530) 555-0100" value={doctorForm.phone} onChange={(e) => setDoctorForm((f) => ({ ...f, phone: e.target.value }))} /></label>
+            </div>
+
+            <p className="eyebrow" style={{ marginTop: 16 }}>Available time slots</p>
+            {slots.map((slot, i) => (
+              <div key={i} className="slot-row">
+                <input type="date" value={slot.date} onChange={(e) => setSlots((s) => s.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} />
+                <input placeholder="2:00 PM" value={slot.time} onChange={(e) => setSlots((s) => s.map((x, j) => j === i ? { ...x, time: e.target.value } : x))} />
+                {slots.length > 1 && <button type="button" className="cancel-btn" onClick={() => setSlots((s) => s.filter((_, j) => j !== i))}>✕</button>}
+              </div>
+            ))}
+            <button type="button" className="add-slot-inline" onClick={() => setSlots((s) => [...s, { ...EMPTY_SLOT }])}>+ Add another slot</button>
+
+            {doctorSuccess && <p className="user-error" style={{ color: '#2a6b4a' }}>{doctorSuccess}</p>}
+            <button className="start-session-button" disabled={savingDoctor} type="submit" style={{ marginTop: 16 }}>
+              {savingDoctor ? 'Saving…' : 'Save doctor'}
             </button>
           </form>
-        )}
+        </section>
+      )}
 
-        <div className="filter-bar">
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select value={filterUrgency} onChange={(e) => setFilterUrgency(e.target.value)}>
-            <option value="all">All urgency</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </select>
-        </div>
-
-        {loadError && <p className="inline-error">{loadError}</p>}
-
-        {filtered.length === 0 ? (
-          <div className="empty-state"><p>No appointments yet.</p></div>
-        ) : (
-          <div className="appt-table-wrap">
-            <table className="appt-table">
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Type</th>
-                  <th>Urgency</th>
-                  <th>Reason</th>
-                  <th>When</th>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((a) => (
-                  <tr key={a.id} className={a.source === 'bot' ? 'appt-row bot-row' : 'appt-row'}>
-                    <td className="appt-name">{a.patient_name}</td>
-                    <td>{TYPE_LABELS[a.appointment_type] || a.appointment_type}</td>
-                    <td>
-                      <span className="urgency-chip" style={{ background: URGENCY_COLORS[a.urgency] }}>
-                        {a.urgency}
-                      </span>
-                    </td>
-                    <td className="appt-reason">{a.reason}{a.notes ? <span className="appt-notes"> — {a.notes}</span> : ''}</td>
-                    <td className="appt-time">{a.suggested_time}</td>
-                    <td>
-                      <span className={`source-chip ${a.source}`}>{a.source === 'bot' ? 'Bot' : 'Staff'}</span>
-                    </td>
-                    <td>
-                      <span className={`appt-status ${a.status}`}>{a.status}</span>
-                    </td>
-                    <td className="appt-actions">
-                      {a.status === 'pending' && (
-                        <button type="button" onClick={() => updateStatus(a.id, 'confirmed')}>Confirm</button>
-                      )}
-                      {a.status === 'confirmed' && (
-                        <button type="button" onClick={() => updateStatus(a.id, 'completed')}>Complete</button>
-                      )}
-                      {a.status !== 'cancelled' && a.status !== 'completed' && (
-                        <button className="cancel-btn" type="button" onClick={() => updateStatus(a.id, 'cancelled')}>Cancel</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {activeTab === 'add-facility' && (
+        <section className="queue-panel">
+          <div className="queue-header">
+            <div><p className="eyebrow">Expand the facility network</p><h2>New facility</h2></div>
           </div>
-        )}
-      </section>
+          <form className="appt-form" onSubmit={handleAddFacility}>
+            <div className="appt-form-grid">
+              <label>Facility name<input required placeholder="Sutter Davis Hospital" value={facilityForm.name} onChange={(e) => setFacilityForm((f) => ({ ...f, name: e.target.value }))} /></label>
+              <label>Type
+                <select value={facilityForm.type} onChange={(e) => setFacilityForm((f) => ({ ...f, type: e.target.value }))}>
+                  {Object.entries(FACILITY_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </label>
+              <label>Street address<input placeholder="2000 Sycamore Lane" value={facilityForm.address} onChange={(e) => setFacilityForm((f) => ({ ...f, address: e.target.value }))} /></label>
+              <label>City<input placeholder="Davis" value={facilityForm.city} onChange={(e) => setFacilityForm((f) => ({ ...f, city: e.target.value }))} /></label>
+              <label>ZIP<input placeholder="95616" value={facilityForm.zip} onChange={(e) => setFacilityForm((f) => ({ ...f, zip: e.target.value }))} /></label>
+              <label>Phone<input placeholder="(530) 756-6440" value={facilityForm.phone} onChange={(e) => setFacilityForm((f) => ({ ...f, phone: e.target.value }))} /></label>
+              <label style={{ gridColumn: '1 / -1' }}>Hours<input placeholder="ER: 24/7 · Clinics: Mon-Fri 8 AM-5 PM" value={facilityForm.hours} onChange={(e) => setFacilityForm((f) => ({ ...f, hours: e.target.value }))} /></label>
+            </div>
+            {facilitySuccess && <p className="user-error" style={{ color: '#2a6b4a' }}>{facilitySuccess}</p>}
+            <button className="start-session-button" disabled={savingFacility} type="submit" style={{ marginTop: 16 }}>
+              {savingFacility ? 'Saving…' : 'Save facility'}
+            </button>
+          </form>
+        </section>
+      )}
     </main>
   );
 }

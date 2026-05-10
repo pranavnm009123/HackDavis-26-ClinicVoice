@@ -84,43 +84,81 @@ const functionDeclarations = [
   },
   {
     name: 'lookup_resources',
-    description: 'Return demo local resources by category and city.',
+    description: 'Return local resources by category and city.',
     parameters: {
       type: Type.OBJECT,
       properties: {
         category: {
           type: Type.STRING,
-          enum: ['clinic', 'shelter', 'food', 'pharmacy', 'interpreter', 'emergency_line'],
+          enum: ['clinic', 'shelter', 'housing', 'food', 'pharmacy', 'interpreter', 'emergency_line', 'insurance_help'],
+          description: 'Use "housing" for general housing search, student housing, affordable housing programs. Use "shelter" for emergency shelter. Use "insurance_help" for Medi-Cal/Covered CA.',
         },
         city: { type: Type.STRING },
       },
-      required: ['category', 'city'],
+      required: ['category'],
     },
   },
   {
-    name: 'schedule_appointment',
-    description: 'Create a follow-up appointment for the patient and notify staff. Call this when urgency is HIGH or CRITICAL, or when the patient clearly needs nurse triage, a social worker, an interpreter, or a clinic review.',
+    name: 'find_nearest_facility',
+    description: 'Find the nearest hospital, clinic, shelter, or other facility to the patient. Call this when the patient asks where to go or needs an ER/urgent care location.',
     parameters: {
       type: Type.OBJECT,
       properties: {
+        type: {
+          type: Type.STRING,
+          enum: ['hospital', 'free_clinic', 'urgent_care', 'shelter', 'food_bank', 'pharmacy'],
+          description: 'Use hospital for ER or emergency needs, free_clinic for uninsured routine care.',
+        },
+        patient_city: {
+          type: Type.STRING,
+          description: 'City or zip code the patient is in or near.',
+        },
+      },
+      required: ['type', 'patient_city'],
+    },
+  },
+  {
+    name: 'get_available_slots',
+    description: 'Fetch available doctor appointment slots by specialization, sorted by proximity to the patient. Call this when the patient needs a follow-up appointment. Present the returned slots to the patient and let them choose.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        specialization: {
+          type: Type.STRING,
+          enum: ['general_practice', 'cardiology', 'social_work', 'pediatrics', 'psychiatry', 'interpreter'],
+          description: 'Choose based on patient symptoms and urgency.',
+        },
+        patient_city: {
+          type: Type.STRING,
+          description: 'Patient city or zip — used to sort slots by proximity.',
+        },
+      },
+      required: ['specialization'],
+    },
+  },
+  {
+    name: 'book_appointment',
+    description: 'Book a specific slot the patient has chosen. Call this after the patient confirms their preferred slot from the list returned by get_available_slots.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        slot_id: { type: Type.STRING, description: 'The slot_id from get_available_slots.' },
         patient_name: { type: Type.STRING },
-        appointment_type: {
-          type: Type.STRING,
-          enum: ['nurse_triage', 'clinic_review', 'interpreter', 'social_worker', 'emergency_escalation'],
-        },
-        urgency: {
-          type: Type.STRING,
-          enum: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
-        },
         reason: { type: Type.STRING },
-        suggested_time: {
-          type: Type.STRING,
-          enum: ['ASAP', 'Today', 'Within 48h', 'This week'],
-        },
+        urgency: { type: Type.STRING, enum: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] },
         notes: { type: Type.STRING },
         intake_id: { type: Type.STRING },
       },
-      required: ['patient_name', 'appointment_type', 'urgency', 'reason', 'suggested_time'],
+      required: ['slot_id', 'patient_name', 'reason', 'urgency'],
+    },
+  },
+  {
+    name: 'end_session',
+    description: 'Close the session after finalize_intake has been called and a brief closing message has been delivered. Call this once — do not ask "Is there anything else I can help with?" after an intake is finalized.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+      required: [],
     },
   },
 ];
@@ -186,7 +224,7 @@ function forwardServerContent(message, patientWs) {
   }
 }
 
-async function handleToolCall(message, session, broadcast, storage, context) {
+async function handleToolCall(message, session, broadcast, storage, context, userContext) {
   const toolCall = message.toolCall ?? message.tool_call;
   const rawCalls = toolCall?.functionCalls ?? toolCall?.function_calls ?? [];
   const functionCalls = rawCalls.map((call) => ({
@@ -201,6 +239,12 @@ async function handleToolCall(message, session, broadcast, storage, context) {
 
   const functionResponses = await Promise.all(
     functionCalls.map(async (call) => {
+      if (call.name === 'end_session') {
+        // Give the bot ~2.5s to finish speaking the closing message before closing
+        setTimeout(() => session.close(), 2500);
+        return { id: call.id, name: call.name, response: { success: true } };
+      }
+
       try {
         const response = await dispatchFunctionCall(
           call.name,
@@ -277,7 +321,7 @@ export async function createGeminiSession({
       },
       onmessage: async (message) => {
         forwardServerContent(message, patientWs);
-        await handleToolCall(message, session, broadcast, storage, { mode });
+        await handleToolCall(message, session, broadcast, storage, { mode }, userContext);
       },
       onerror: (error) => {
         sendJson(patientWs, {

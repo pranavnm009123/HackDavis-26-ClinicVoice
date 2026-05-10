@@ -8,6 +8,8 @@ import { createGeminiSession } from './geminiSession.js';
 import { isValidMode } from './intakeTemplates.js';
 import * as storage from './storage.js';
 import * as apptStorage from './appointments.js';
+import * as doctorStorage from './doctors.js';
+import * as facilityStorage from './facilities.js';
 import * as userStorage from './users.js';
 import { sendWelcomeEmail } from './email.js';
 
@@ -113,6 +115,45 @@ app.post('/appointments', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+app.get('/doctors', async (_req, res) => {
+  try {
+    const doctors = await doctorStorage.getAllDoctors();
+    const withSlots = await Promise.all(
+      doctors.map(async (d) => ({ ...d, slots: await doctorStorage.getDoctorSlots(d.id) }))
+    );
+    res.json(withSlots);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/doctors', async (req, res) => {
+  try {
+    const doctor = await doctorStorage.saveDoctor(req.body);
+    res.status(201).json(doctor);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/doctors/:doctorId/slots', async (req, res) => {
+  try {
+    const slot = await doctorStorage.addSlot({ ...req.body, doctor_id: req.params.doctorId });
+    broadcastStaff({ type: 'SLOT_ADDED', slot });
+    res.status(201).json(slot);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/facilities', async (_req, res) => {
+  try {
+    res.json(await facilityStorage.getAllFacilities());
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/facilities', async (req, res) => {
+  try {
+    const facility = await facilityStorage.saveFacility(req.body);
+    broadcastStaff({ type: 'NEW_FACILITY', facility });
+    res.status(201).json(facility);
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 app.post('/users', async (req, res) => {
@@ -302,6 +343,8 @@ server.on('upgrade', (request, socket, head) => {
 try {
   await storage.connectDatabase();
   await apptStorage.seedIfEmpty();
+  await facilityStorage.seedIfEmpty();
+  await doctorStorage.seedIfEmpty();
   console.log('VoiceBridge MongoDB connected');
 } catch (error) {
   console.warn(`VoiceBridge MongoDB unavailable: ${error.message}`);
