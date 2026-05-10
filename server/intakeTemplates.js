@@ -134,7 +134,7 @@ export function getTemplate(mode) {
   return intakeTemplates[mode] || intakeTemplates.clinic;
 }
 
-function getQuestionFlowGuidance(mode) {
+function getQuestionFlowGuidance(mode, isSignLanguage = false) {
   if (mode === 'clinic') {
     return `Clinic question order guidance:
 - Ask the reason for visit first.
@@ -158,6 +158,20 @@ function getQuestionFlowGuidance(mode) {
   }
 
   if (mode === 'support_services') {
+    if (isSignLanguage) {
+      return `Access & Support ASL question order guidance:
+- The patient is deaf or hard of hearing. "ASL interpreter" is automatically part of their needs — do NOT ask about language preferences or interpreters as a separate question.
+- Ask help_type_needed first. Keep it short and offer clear options: "Medical care, shelter, food, or something else? Sign one." Wait for the signing window.
+- Ask current_location_or_zip: "Which city are you in? You can fingerspell or hold up a paper." One turn, wait.
+- Ask mobility_needs: "Do you use a wheelchair or walker?" — yes or no only. Wait.
+- Ask asl_facility_requirement: "Does the place need to have ASL-trained staff on site — or is a phone interpreter okay?" — sign YES for on-site only, NO for either. This determines must-have vs. nice-to-have.
+- Ask transportation_available: "Can someone drive you, or do you need transport help?" — yes or no. Wait.
+- Ask insurance_or_cost_concern: "Is cost or insurance a concern?" — yes or no. Wait.
+- When calling check_resource_access, ALWAYS include "ASL interpreter" in the needs array. Add "wheelchair" if mobility is yes. Add "transportation" if transport help is needed.
+- When reading back results, state explicitly whether each facility has ASL staff or interpreter support. This is the most critical dimension for this patient.
+- Ask support contact last: "Is there someone who helps you — a support person or caregiver?" Wait, then collect name, relationship, and contact.
+- One signed question per turn. Never combine. Wait for the signing window to close before interpreting.`;
+    }
     return `Access & Support question order guidance:
 - Ask help_type_needed first: "What kind of help are you looking for — medical care, shelter, food, or something else?"
 - Ask current_location_or_zip: "What city or zip code are you in?"
@@ -198,7 +212,7 @@ export function buildSystemInstruction(mode, languagePreference = 'auto') {
     ? `Strict ASL turn-taking rule: every assistant turn may ask for exactly one missing field. Never ask two questions in one sentence, never ask "how long and how severe" together, and avoid "and" / "also" follow-up questions. If you need duration and severity, ask duration now, wait for the signed answer, then ask severity in the next turn.
 If the patient answers only part of a previous combined question, accept that answer and ask only the next missing field. Do not repeat fields already answered.`
     : '';
-  const questionFlowGuidance = isSignLanguage ? `\n${getQuestionFlowGuidance(template.mode)}\n` : '';
+  const questionFlowGuidance = isSignLanguage ? `\n${getQuestionFlowGuidance(template.mode, true)}\n` : '';
   const appointmentInstruction = isSignLanguage
     ? 'For finalized ASL intakes, the server automatically creates a pending staff follow-up row after finalize_intake. If the patient needs a confirmed appointment during the conversation, use get_available_slots and book_appointment as described below.'
     : '';
@@ -247,7 +261,14 @@ If known_barriers exist, tell the patient what staff have previously reported at
 If ALL results have unmet needs for this patient, call tag_urgency with level HIGH and reason "access_gap — no locally reachable facility meets patient combined access needs", then call lookup_resources for a broader search.
 Urgency in this mode is about access gaps — a patient who cannot reach ANY matched resource is HIGH urgency even if their underlying need is routine.
 Collect support_contact before finalize_intake — a caregiver contact is especially important for patients with access barriers.
-Do not skip check_resource_access. It is the primary differentiating action of this mode.` : ''}
+Do not skip check_resource_access. It is the primary differentiating action of this mode.
+${isSignLanguage ? `
+ASL IN ACCESS & SUPPORT MODE:
+This patient is communicating via sign language. Their needs array for check_resource_access MUST always include "ASL interpreter" — add it automatically even if not stated.
+Do not ask about language preferences or interpreters as a separate question — it is already known.
+When reading back facility results, explicitly state whether each facility has ASL-trained staff or a sign language interpreter available. This is the most critical access dimension for this patient and must be highlighted before any other dimension.
+If ALL returned facilities have "ASL interpreter" in the missing list (no ASL-accessible option found), immediately call tag_urgency with level HIGH and reason "access_gap: no ASL-accessible facility available in this area". This overrides the standard urgency threshold.
+When asking questions in this mode, use the short one-question framing from the ASL question order guidance above. Offer visible options where possible (e.g., "Medical, shelter, or food? Sign one.") to reduce the signing burden.` : ''}` : ''}
 
 INSURANCE GUIDANCE — follow this logic whenever a patient raises cost or insurance concerns:
 
