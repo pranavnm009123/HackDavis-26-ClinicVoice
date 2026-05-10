@@ -199,9 +199,34 @@ function getQuestionFlowGuidance(mode, isSignLanguage = false) {
 - Do not combine household size, location, urgency timing, diet needs, transportation, supplies, accessibility, or contact method in one turn.`;
 }
 
-export function buildSystemInstruction(mode, languagePreference = 'auto') {
+export function buildSystemInstruction(mode, languagePreference = 'auto', userProfile = null) {
   const template = getTemplate(mode);
   const isSignLanguage = languagePreference === 'sign_language';
+
+  const p = userProfile;
+  const profileLines = p ? [
+    p.name && `- Name: ${p.name}`,
+    p.phone && `- Phone: ${p.phone}`,
+    p.bloodGroup && `- Blood group: ${p.bloodGroup}`,
+    p.insurance?.provider && `- Insurance: ${p.insurance.provider}${p.insurance.plan ? ` — ${p.insurance.plan}` : ''}${p.insurance.memberId ? ` (ID: ${p.insurance.memberId})` : ''}`,
+    p.preferredLanguage && p.preferredLanguage !== 'en' && `- Preferred language: ${p.preferredLanguage}`,
+    p.mobilityNeeds && `- Mobility needs: ${p.mobilityNeeds}`,
+    p.usesWheelchair && `- Uses a wheelchair`,
+    p.mobilityLevel && p.mobilityLevel !== 'none' && `- Mobility level: ${p.mobilityLevel}`,
+    p.walkingLimitMeters && `- Comfortable walking limit: ${p.walkingLimitMeters} meters`,
+    p.allergies && `- Allergies: ${p.allergies}`,
+    p.dateOfBirth && `- Date of birth: ${p.dateOfBirth}`,
+    p.emergencyContact?.name && `- Emergency contact: ${p.emergencyContact.name} (${p.emergencyContact.relationship || 'contact'}), ${p.emergencyContact.phone}`,
+  ].filter(Boolean) : [];
+
+  const profileBlock = profileLines.length > 0 ? `
+
+RETURNING PATIENT — PRE-LOADED PROFILE:
+The following details are saved in the patient's account. Do NOT re-ask for these unless the patient says they want to update them:
+${profileLines.join('\n')}
+
+FIELD VERIFICATION RULE: Before using a saved field in an action (sending a confirmation email, filing insurance, booking an appointment), read back only that specific field and ask the patient to confirm. Example: "I'll send the confirmation to [phone on file] — is that correct?" Never read all fields at once. Only verify the field you are actually about to use.
+` : '';
 
   const languageInstruction = isSignLanguage
     ? `The patient is deaf or non-verbal and will communicate using sign language (ASL or another sign system) via camera. Do NOT expect voice input. Speak your questions and responses aloud so staff can hear. Ask one short question, then wait silently while the patient signs. The client automatically sends one cue after a short signing window; interpret the recent camera frames only at that cue, confirm what you understood, and continue with the next new question. Do not repeat the same question unless the signing was unclear.`
@@ -242,6 +267,7 @@ ${languageInstruction}
 You are currently running ${template.label} mode.
 Ask one question at a time. Use plain language. Be patient, accessible, and nonjudgmental.
 ${turnTakingInstruction}
+${profileBlock}
 
 Visual input: If the patient holds up a document, insurance card, ID, pill bottle, prescription label, or any text to the camera, immediately read the relevant text aloud and extract any intake-relevant information from it (name, insurance ID, medication name, dosage, etc.). Do not wait for them to speak — visual input is a complete and valid channel. Describe what you read so the patient knows you saw it.
 
@@ -263,6 +289,8 @@ Relevant resource categories for this mode: ${template.resourceTypes.join(', ')}
 Helpful next-step examples: ${template.nextStepExamples.join('; ')}.
 
 After the opening sequence (name, email, phone) is complete, ask the patient for their city or zip code ("Which city or area are you in? This helps me find the closest options for you."). Store this as their patient_city.
+
+If at any point the patient mentions wanting to go somewhere — a park, a pharmacy, a clinic, a shop, a person's home, anywhere — immediately call request_navigation with their words as destination_query. Don't ask for confirmation first; the map opens instantly and they can refine the search there. Continue the conversation while the map is open, and feel free to mention "I've opened a map for you on your screen — you can pick the right one and I'll keep helping."
 
 If a red flag appears, immediately call tag_urgency before continuing.
 For CRITICAL or HIGH urgency, call find_nearest_facility with type "hospital" and the patient's city. Read the nearest ER or hospital name, address, and phone number aloud so the patient knows where to go immediately.

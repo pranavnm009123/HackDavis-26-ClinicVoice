@@ -177,6 +177,24 @@ const functionDeclarations = [
     },
   },
   {
+    name: 'request_navigation',
+    description: 'Open an embedded map and route planner the moment the patient mentions wanting to go somewhere — a park, a pharmacy, a coffee shop, a friend\'s house, anywhere. Trigger phrases include "I want to go to X", "How do I get to Y", "Take me to Z", "Where is the nearest W". Do not ask the patient for confirmation first; opening the map is fast and they can refine the search there. Continue the conversation while the panel is open.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        destination_query: {
+          type: Type.STRING,
+          description: 'The destination in the patient\'s own words, e.g. "Central Park", "the closest pharmacy", "Trader Joe\'s".',
+        },
+        reason: {
+          type: Type.STRING,
+          description: 'Optional short reason the patient wants to go there — helps us recommend a transport mode.',
+        },
+      },
+      required: ['destination_query'],
+    },
+  },
+  {
     name: 'send_email',
     description: 'Send an email to the patient with resource links, apartment listings, or other information they requested. Only call this if the patient has explicitly provided their email address and asked you to send something.',
     parameters: {
@@ -375,7 +393,7 @@ export async function createGeminiSession({
           },
         },
       },
-      systemInstruction: buildSystemInstruction(mode, languagePreference),
+      systemInstruction: buildSystemInstruction(mode, languagePreference, userContext?.profile ?? null),
       tools: [{ functionDeclarations }],
     },
     callbacks: {
@@ -384,7 +402,7 @@ export async function createGeminiSession({
       },
       onmessage: async (message) => {
         forwardServerContent(message, patientWs);
-        await handleToolCall(message, session, broadcast, storage, { mode, languagePreference }, userContext);
+        await handleToolCall(message, session, broadcast, storage, { mode, languagePreference, patientWs }, userContext);
       },
       onerror: (error) => {
         sendJson(patientWs, {

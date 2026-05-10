@@ -131,6 +131,19 @@ async function createFollowUpAppointment({
   return appointment;
 }
 
+export async function request_navigation(args, context = {}) {
+  const ws = context.patientWs;
+  if (!ws || ws.readyState !== 1) return { success: false, error: 'patient socket not open' };
+  ws.send(
+    JSON.stringify({
+      type: 'NAVIGATE_REQUEST',
+      query: args.destination_query || '',
+      reason: args.reason || '',
+    }),
+  );
+  return { success: true, opened: true };
+}
+
 export async function tag_urgency(args, broadcast, context = {}) {
   broadcast({
     type: 'URGENCY_ALERT',
@@ -716,6 +729,7 @@ export const handlers = {
   find_nearest_facility,
   check_resource_access,
   book_appointment,
+  request_navigation,
 };
 
 export async function dispatchFunctionCall(name, args, broadcast, storage = defaultStorage, context = {}, userContext = null) {
@@ -725,5 +739,6 @@ export async function dispatchFunctionCall(name, args, broadcast, storage = defa
   if (name === 'finalize_intake') return handler(args, broadcast, storage, context, userContext);
   if (name === 'tag_urgency') return handler(args, broadcast, context);
   if (name === 'book_appointment') return handler(args, broadcast, userContext);
+  if (name === 'request_navigation') return handler(args, context);
   return handler(args);
 }

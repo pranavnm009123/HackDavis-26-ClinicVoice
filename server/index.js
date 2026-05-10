@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import dotenv from 'dotenv';
 import { WebSocketServer, WebSocket } from 'ws';
+import jwt from 'jsonwebtoken';
 import Anthropic from '@anthropic-ai/sdk';
 import { createGeminiSession } from './geminiSession.js';
 import { isValidMode } from './intakeTemplates.js';
@@ -14,6 +15,10 @@ import * as facilityStorage from './facilities.js';
 import * as userStorage from './users.js';
 import { listBarriers, createBarrier, getAccessScoreForFacility, getFacilitiesWithScores } from './supportServices.js';
 import { sendWelcomeEmail } from './email.js';
+import authRoutes from './routes/auth.js';
+import profileRoutes from './routes/profile.js';
+import navigateRoutes from './routes/navigate.js';
+import AuthUser from './models/User.js';
 
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(serverDir, '../.env') });
@@ -23,8 +28,8 @@ const PORT = process.env.PORT || 3001;
 const app = express();
 app.use((_req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (_req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -101,6 +106,10 @@ app.get('/intakes', async (_req, res) => {
 });
 
 app.use(express.json());
+
+app.use('/auth', authRoutes);
+app.use('/api', profileRoutes);
+app.use('/api', navigateRoutes);
 
 app.get('/appointments', async (_req, res) => {
   try {
@@ -284,8 +293,17 @@ patientWss.on('connection', (ws) => {
   console.log('Patient WS connected');
   sendJson(ws, { type: 'session', status: 'ready' });
 
-  function startSession({ mode = 'clinic', languagePreference = 'auto', user = null }) {
-    sessionUser = user;
+  async function startSession({ mode = 'clinic', languagePreference = 'auto', user = null, token = null }) {
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'clinicvoice-dev-secret');
+        sessionUser = await AuthUser.findById(decoded.userId).lean();
+      } catch {
+        sessionUser = user;
+      }
+    } else {
+      sessionUser = user;
+    }
     if (!isValidMode(mode)) {
       sendJson(ws, {
         type: 'session',
@@ -325,7 +343,7 @@ patientWss.on('connection', (ws) => {
     const message = safeJsonParse(data);
 
     if (message?.type === 'start_session') {
-      startSession(message);
+      await startSession(message);
       return;
     }
 

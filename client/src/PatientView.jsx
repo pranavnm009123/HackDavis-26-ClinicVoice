@@ -1,6 +1,143 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAudio } from './useAudio.js';
 import { useSocket } from './useSocket.js';
+import { useAuth } from './useAuth.jsx';
+
+const DRAFT_FIELDS = {
+  clinic: [
+    { key: 'name', label: 'Name' },
+    { key: 'chiefComplaint', label: 'Chief complaint' },
+    { key: 'duration', label: 'Duration' },
+    { key: 'urgency', label: 'Urgency' },
+    { key: 'insurance', label: 'Insurance' },
+    { key: 'allergies', label: 'Allergies' },
+  ],
+  shelter: [
+    { key: 'name', label: 'Name' },
+    { key: 'situation', label: 'Situation' },
+    { key: 'familySize', label: 'Family size' },
+    { key: 'pets', label: 'Pets' },
+    { key: 'mobility', label: 'Mobility' },
+  ],
+  food_aid: [
+    { key: 'name', label: 'Name' },
+    { key: 'householdSize', label: 'Household size' },
+    { key: 'zip', label: 'ZIP code' },
+    { key: 'dietary', label: 'Dietary needs' },
+    { key: 'transport', label: 'Transport' },
+  ],
+  support_services: [
+    { key: 'name', label: 'Name' },
+    { key: 'language', label: 'Language' },
+    { key: 'helpType', label: 'Help needed' },
+    { key: 'mobility', label: 'Mobility' },
+  ],
+};
+
+const DRAFT_SUGGESTIONS = {
+  clinic: [
+    'UC Davis Student Health Center — (530) 752-2349',
+    'Yolo County free pharmacy assistance available',
+    'For emergencies call 911 immediately',
+  ],
+  shelter: [
+    'Yolo County Homeless & Poverty Services — (530) 661-2750',
+    'Statewide crisis hotline: 211 (free, 24/7)',
+    'Salvation Army Davis — (530) 756-9218',
+  ],
+  food_aid: [
+    'Yolo Food Bank — open Tue/Thu 9 am–1 pm',
+    'CalFresh same-day assistance available',
+    'USDA SNAP application at benefits.gov',
+  ],
+  support_services: [
+    '211 connects you to all local social services',
+    'Yolo Bus reduced-fare ADA transit available',
+    'Interpreter services available — just ask',
+  ],
+};
+
+function extractDraft(msgs, mode) {
+  if (!msgs.length) return {};
+  const all = msgs.map((m) => m.text).join(' ');
+  const modelText = msgs.filter((m) => m.role === 'model').map((m) => m.text).join(' ');
+  const f = {};
+
+  const nm = all.match(/(?:name(?:\s+is|\s*'s)?\s+([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)?)|I(?:'m| am)\s+([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)?))/);
+  if (nm) f.name = (nm[1] || nm[2] || '').trim();
+
+  if (mode === 'clinic') {
+    const sx = modelText.match(/(?:you(?:'re| are) (?:experiencing|having|suffering from)|you(?:'ve| have) mentioned|noted:?)\s+([^.!?]{6,80})/i);
+    if (sx) f.chiefComplaint = sx[1].replace(/\s+/g, ' ').trim();
+
+    const dur = all.match(/(?:for|about|the past|last)\s+(\d+\s+(?:day|week|month|hour|year)s?)/i);
+    if (dur) f.duration = dur[1];
+
+    if (/no\s+insurance|uninsured|don'?t have insurance/i.test(all)) f.insurance = 'None';
+    else {
+      const ins = all.match(/(?:insurance(?:\s+is|:| through| with)\s+)([A-Za-z][a-zA-Z\s]{2,28}?)(?:[.!?,]|$)/i);
+      if (ins) f.insurance = ins[1].trim();
+    }
+
+    if (/no\s+(?:known\s+)?allerg/i.test(all)) f.allergies = 'None known';
+    else {
+      const al = all.match(/allerg(?:ic\s+to|ies?(?:\s+include)?:?\s*)([^.!?]{3,50})/i);
+      if (al) f.allergies = al[1].trim();
+    }
+
+    if (/severe|emergency|can't breathe|chest pain|unconscious/i.test(all)) f.urgency = 'High';
+    else if (/moderate|getting worse|significant pain/i.test(all)) f.urgency = 'Medium';
+    else if (/mild|minor|not urgent/i.test(all)) f.urgency = 'Low';
+  }
+
+  if (mode === 'shelter') {
+    const fam = all.match(/(\d+)\s+(?:people|persons?|family members?|children|kids?|adults?)/i);
+    if (fam) f.familySize = fam[1] + ' people';
+
+    if (/(?:have (?:a )?pet|bring (?:my )?(?:dog|cat)|traveling with (?:a )?pet)/i.test(all)) f.pets = 'Yes';
+    else if (/no\s+pets?/i.test(all)) f.pets = 'No';
+
+    if (/wheelchair|mobility (?:aid|scooter|device)/i.test(all)) f.mobility = 'Wheelchair/aid needed';
+
+    if (/sleeping outside|in (?:my )?car|on the street|no shelter|unsheltered/i.test(all)) f.situation = 'Unsheltered';
+    else if (/at[- ]risk|about to (?:lose|be evicted)|facing eviction/i.test(all)) f.situation = 'At risk';
+  }
+
+  if (mode === 'food_aid') {
+    const hs = all.match(/(?:household of|family of|(\d+)\s+(?:people|persons?))/i);
+    if (hs) f.householdSize = (hs[1] || '?') + ' people';
+
+    const zip = all.match(/\b(\d{5})\b/);
+    if (zip) f.zip = zip[1];
+
+    if (/vegan/i.test(all)) f.dietary = 'Vegan';
+    else if (/vegetarian/i.test(all)) f.dietary = 'Vegetarian';
+    else if (/halal/i.test(all)) f.dietary = 'Halal';
+    else if (/kosher/i.test(all)) f.dietary = 'Kosher';
+    else if (/gluten/i.test(all)) f.dietary = 'Gluten-free';
+    else if (/no (?:diet|restriction)/i.test(all)) f.dietary = 'No restrictions';
+
+    if (/no (?:car|transport|bus)/i.test(all)) f.transport = 'No personal vehicle';
+    else if (/(?:have a car|can drive|own a car)/i.test(all)) f.transport = 'Has vehicle';
+  }
+
+  if (mode === 'support_services') {
+    if (/spanish|español/i.test(all)) f.language = 'Spanish';
+    else if (/french|français/i.test(all)) f.language = 'French';
+    else if (/mandarin|chinese/i.test(all)) f.language = 'Mandarin';
+    else if (/arabic/i.test(all)) f.language = 'Arabic';
+    else if (/vietnamese/i.test(all)) f.language = 'Vietnamese';
+
+    if (/wheelchair/i.test(all)) f.mobility = 'Wheelchair user';
+    else if (/limited mobility|hard to walk/i.test(all)) f.mobility = 'Limited mobility';
+
+    const ht = modelText.match(/(?:you(?:'re| are) looking for|help with|assistance (?:with|for))\s+([^.!?]{5,60})/i);
+    if (ht) f.helpType = ht[1].trim();
+  }
+
+  return f;
+}
 
 const modes = [
   { id: 'clinic', label: 'Healthcare', description: 'Symptoms, duration, urgency, accessibility, insurance, next step.' },
@@ -81,11 +218,23 @@ export default function PatientView() {
   const [signedResponsePending, setSignedResponsePending] = useState(false);
   const [showEnglish, setShowEnglish] = useState(false);
   const [translations, setTranslations] = useState({});
+  const [mapBanner, setMapBanner] = useState(null); // { url, query }
 
-  const [isReturning, setIsReturning] = useState(false);
-  const [userId, setUserId] = useState('');
-  const [userError, setUserError] = useState('');
-  const [sessionUser, setSessionUser] = useState(null);
+  const { token, user: authUser, isLoggedIn, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const intakeDraft = useMemo(() => extractDraft(conversation, mode), [conversation, mode]);
+
+  useEffect(() => {
+    if (!mapBanner) return;
+    const a = document.createElement('a');
+    a.href = mapBanner.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, [mapBanner]);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -105,6 +254,11 @@ export default function PatientView() {
   }, []);
 
   const handleSocketMessage = useCallback((message) => {
+    if (message.type === 'NAVIGATE_REQUEST') {
+      const q = encodeURIComponent(message.query || '');
+      setMapBanner({ url: `/navigate${q ? `?q=${q}` : ''}`, query: message.query || 'a location' });
+      return;
+    }
     if (message.type === 'session') {
       if (message.status === 'connected') {
         setSessionStarted(true);
@@ -225,28 +379,14 @@ export default function PatientView() {
     }, 1000);
   }
 
-  async function startSession(langPref = languagePreference) {
-    setUserError('');
-    let user = sessionUser;
-
-    if (!user && isReturning) {
-      if (!userId.trim()) { setUserError('Enter your CowmunityCare ID.'); return; }
-      try {
-        const res = await fetch(`http://${window.location.hostname}:3001/users/${userId.trim().toUpperCase()}`);
-        if (!res.ok) { setUserError('ID not found. Uncheck returning patient to start a new intake.'); return; }
-        const data = await res.json();
-        user = data.user;
-      } catch { setUserError('Could not reach server.'); return; }
-    }
-
-    setSessionUser(user);
+  function startSession(langPref = languagePreference) {
     setConversation([]);
     setSessionLoading(true);
     setSignedResponsePending(false);
     signedResponseCountRef.current = 0;
     window.clearTimeout(aslAutoTimerRef.current);
-    if (!sessionStatus.startsWith('Welcome')) setSessionStatus('Connecting to CowmunityCare...');
-    send({ type: 'start_session', mode, languagePreference: langPref, user });
+    setSessionStatus('Connecting to CowmunityCare...');
+    send({ type: 'start_session', mode, languagePreference: langPref, token: token || null });
   }
 
   async function startWithSpeech() {
@@ -409,6 +549,24 @@ export default function PatientView() {
 
   return (
     <main className="patient-shell" id="main-content">
+      <nav className="patient-topnav">
+        <Link className="patient-topnav-brand" to="/">CowmunityCare</Link>
+        <div className="patient-topnav-actions">
+          <Link className="patient-topnav-link" to="/navigate">Find a place</Link>
+          {isLoggedIn ? (
+            <>
+              <span className="patient-topnav-user">{authUser?.profile?.name || authUser?.email}</span>
+              <Link className="patient-topnav-link" to="/settings">My Profile</Link>
+              <button className="patient-topnav-link is-danger" type="button" onClick={() => { logout(); navigate('/'); }}>Log out</button>
+            </>
+          ) : (
+            <>
+              <Link className="patient-topnav-link" to="/login">Log in</Link>
+              <Link className="patient-topnav-link is-primary" to="/signup">Sign up</Link>
+            </>
+          )}
+        </div>
+      </nav>
       <section className={sessionStarted ? 'patient-card session-active' : 'patient-card session-setup'}>
         <header className="patient-header">
           <div className="brand-lockup">
@@ -448,28 +606,6 @@ export default function PatientView() {
                   <span>{item.description}</span>
                 </button>
               ))}
-            </div>
-
-            <div className="user-id-section">
-              <label className="returning-toggle">
-                <input
-                  type="checkbox"
-                  checked={isReturning}
-                  onChange={(e) => { setIsReturning(e.target.checked); setUserError(''); }}
-                />
-                I have a CowmunityCare ID (returning patient)
-              </label>
-              {isReturning ? (
-                <input
-                  className="user-id-input"
-                  placeholder="CowmunityCare ID — e.g. CC-0001"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                />
-              ) : (
-                <p className="contact-note">The voice agent will ask for your name, email, and phone first.</p>
-              )}
-              {userError && <p className="user-error">{userError}</p>}
             </div>
 
             <div className="input-mode-btns">
@@ -517,67 +653,101 @@ export default function PatientView() {
           </section>
         )}
 
-        {conversation.length > 0 && (
-          <div className="transcript-toolbar">
-            <button
-              className={showEnglish ? 'translate-toggle is-active' : 'translate-toggle'}
-              type="button"
-              onClick={toggleEnglish}
-            >
-              {showEnglish ? '✓ Showing English' : '↔ Translate to English'}
-            </button>
-          </div>
-        )}
-
-        <div className="conversation" ref={conversationRef} aria-live="polite" aria-label="Conversation transcript">
-          {sessionLoading ? (
-            <div className="welcome-bubble">
-              <div className="session-loading">
-                <div className="spinner" aria-hidden />
-                Connecting to CowmunityCare…
-              </div>
-            </div>
-          ) : conversation.length === 0 ? (
-            <div className="welcome-bubble">
-              {sessionStarted && languagePreference === 'sign_language'
-                ? 'Turn on the camera and sign after each question. CowmunityCare will interpret automatically.'
-                : sessionStarted
-                  ? "You're connected — speech input is active. Speak naturally."
-                  : 'Pick a help type, then tap the mic to speak or the camera for sign language.'}
-            </div>
-          ) : (
-            conversation.map((message) => (
-              <div
-                className={message.role === 'user' ? 'bubble patient-bubble' : 'bubble ai-bubble'}
-                key={message.id}
-              >
-                {showEnglish && translations[message.id] && translations[message.id] !== 'pending'
-                  ? renderWithLinks(translations[message.id])
-                  : renderWithLinks(message.text)}
-                {showEnglish && translations[message.id] === 'pending' && (
-                  <span className="translating-indicator">translating…</span>
-                )}
-              </div>
-            ))
-          )}
-          <div className="conversation-end" ref={conversationEndRef} aria-hidden />
-        </div>
-
-        {(socketError || audioError) && (
-          <p className="inline-error" role="alert">{socketError || audioError}</p>
-        )}
-
         {sessionStarted && (
-          <div className="patient-controls">
-            <div className="session-side-controls">
-              <button className="camera-button" type="button" aria-pressed={cameraOn} onClick={toggleCamera}>
-                {cameraOn ? 'Stop camera' : 'Camera'}
-              </button>
-              <button className="hangup-button" type="button" onClick={hangUp}>
-                <HangUpSvg />
-                Hang up
-              </button>
+          <div className="session-split-body">
+            <div className="session-left">
+              {mapBanner && (
+                <div className="map-banner">
+                  <span>Map ready for <strong>{mapBanner.query}</strong></span>
+                  <a href={mapBanner.url} target="_blank" rel="noopener noreferrer" className="map-banner-btn" onClick={() => setMapBanner(null)}>Open map</a>
+                  <button className="map-banner-close" onClick={() => setMapBanner(null)} aria-label="Dismiss">✕</button>
+                </div>
+              )}
+              {conversation.length > 0 && (
+                <div className="transcript-toolbar">
+                  <button
+                    className={showEnglish ? 'translate-toggle is-active' : 'translate-toggle'}
+                    type="button"
+                    onClick={toggleEnglish}
+                  >
+                    {showEnglish ? '✓ Showing English' : '↔ Translate to English'}
+                  </button>
+                </div>
+              )}
+
+              <div className="conversation" ref={conversationRef} aria-live="polite" aria-label="Conversation transcript">
+                {sessionLoading ? (
+                  <div className="welcome-bubble">
+                    <div className="session-loading">
+                      <div className="spinner" aria-hidden />
+                      Connecting to CowmunityCare…
+                    </div>
+                  </div>
+                ) : conversation.length === 0 ? (
+                  <div className="welcome-bubble">
+                    {languagePreference === 'sign_language'
+                      ? 'Turn on the camera and sign after each question. CowmunityCare will interpret automatically.'
+                      : "You're connected — speech input is active. Speak naturally."}
+                  </div>
+                ) : (
+                  conversation.map((message) => (
+                    <div
+                      className={message.role === 'user' ? 'bubble patient-bubble' : 'bubble ai-bubble'}
+                      key={message.id}
+                    >
+                      {showEnglish && translations[message.id] && translations[message.id] !== 'pending'
+                        ? renderWithLinks(translations[message.id])
+                        : renderWithLinks(message.text)}
+                      {showEnglish && translations[message.id] === 'pending' && (
+                        <span className="translating-indicator">translating…</span>
+                      )}
+                    </div>
+                  ))
+                )}
+                <div className="conversation-end" ref={conversationEndRef} aria-hidden />
+              </div>
+
+              {(socketError || audioError) && (
+                <p className="inline-error" role="alert">{socketError || audioError}</p>
+              )}
+
+              <div className="patient-controls">
+                <div className="session-side-controls">
+                  <button className="camera-button" type="button" aria-pressed={cameraOn} onClick={toggleCamera}>
+                    {cameraOn ? 'Stop camera' : 'Camera'}
+                  </button>
+                  <button className="hangup-button" type="button" onClick={hangUp}>
+                    <HangUpSvg />
+                    Hang up
+                  </button>
+                </div>
+              </div>
             </div>
+
+            <aside className="session-right">
+              <div className="draft-panel">
+                <div className="draft-panel-header">
+                  <span>Intake in progress</span>
+                  <span className="draft-dot" />
+                </div>
+                <div className="draft-fields">
+                  {(DRAFT_FIELDS[mode] || []).map(({ key, label }) => (
+                    <div className="draft-field" key={key}>
+                      <span className="draft-label">{label}</span>
+                      <span className={intakeDraft[key] ? 'draft-value is-filled' : 'draft-value'}>
+                        {intakeDraft[key] || '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="draft-suggestions">
+                  <div className="draft-suggestions-title">Helpful resources</div>
+                  {(DRAFT_SUGGESTIONS[mode] || []).map((text, i) => (
+                    <div className="draft-suggestion" key={i}>{text}</div>
+                  ))}
+                </div>
+              </div>
+            </aside>
           </div>
         )}
 
