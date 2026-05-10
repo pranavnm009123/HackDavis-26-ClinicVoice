@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import { generateIntakeCard } from './claude.js';
 import * as defaultStorage from './storage.js';
+import * as appointmentsStorage from './appointments.js';
+import { sendAppointmentConfirmation } from './email.js';
 
 function parseJsonish(value, fallback) {
   if (Array.isArray(value) || (value && typeof value === 'object')) {
@@ -168,10 +170,31 @@ export async function lookup_resources(args) {
   return resourcesByCategory[args.category] || resourcesByCategory.clinic;
 }
 
+export async function schedule_appointment(args, broadcast, userContext = null) {
+  const appointment = await appointmentsStorage.saveAppointment({
+    ...args,
+    id: crypto.randomUUID(),
+    source: 'bot',
+    status: 'pending',
+    timestamp: new Date().toISOString(),
+  });
+  broadcast({ type: 'NEW_APPOINTMENT', appointment });
+  if (userContext?.email) {
+    sendAppointmentConfirmation({
+      to: userContext.email,
+      userId: userContext.userId,
+      name: userContext.name,
+      appointment,
+    }).catch((e) => console.warn('[Email] appt confirmation failed:', e.message));
+  }
+  return { success: true, id: appointment.id };
+}
+
 export const handlers = {
   tag_urgency,
   finalize_intake,
   lookup_resources,
+  schedule_appointment,
 };
 
 export async function dispatchFunctionCall(
@@ -180,6 +203,7 @@ export async function dispatchFunctionCall(
   broadcast,
   storage = defaultStorage,
   context = {},
+  userContext = null,
 ) {
   const handler = handlers[name];
 
@@ -193,6 +217,10 @@ export async function dispatchFunctionCall(
 
   if (name === 'tag_urgency') {
     return handler(args, broadcast, context);
+  }
+
+  if (name === 'schedule_appointment') {
+    return handler(args, broadcast, userContext);
   }
 
   return handler(args);

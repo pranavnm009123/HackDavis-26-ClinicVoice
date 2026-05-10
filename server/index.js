@@ -7,6 +7,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createGeminiSession } from './geminiSession.js';
 import { isValidMode } from './intakeTemplates.js';
 import * as storage from './storage.js';
+import * as apptStorage from './appointments.js';
+import * as userStorage from './users.js';
+import { sendWelcomeEmail } from './email.js';
 
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(serverDir, '../.env') });
@@ -14,6 +17,12 @@ dotenv.config({ path: path.join(serverDir, '.env') });
 
 const PORT = process.env.PORT || 3001;
 const app = express();
+app.use((_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
 const server = http.createServer(app);
 const patientWss = new WebSocketServer({ noServer: true });
 const staffWss = new WebSocketServer({ noServer: true });
@@ -86,6 +95,63 @@ app.get('/intakes', async (_req, res) => {
   }
 });
 
+app.use(express.json());
+
+app.get('/appointments', async (_req, res) => {
+  try {
+    res.json(await apptStorage.getAll());
+  } catch (error) {
+    res.status(503).json({ error: error.message });
+  }
+});
+
+app.post('/appointments', async (req, res) => {
+  try {
+    const appt = await apptStorage.saveAppointment({ ...req.body, source: 'staff' });
+    broadcastStaff({ type: 'NEW_APPOINTMENT', appointment: appt });
+    res.status(201).json(appt);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/users', async (req, res) => {
+  try {
+    const { email, phone, name, language } = req.body;
+    if (!email) return res.status(400).json({ error: 'email required' });
+    const { user, isNew } = await userStorage.createUser({ email, phone, name, language });
+    if (isNew) {
+      sendWelcomeEmail({ to: email, userId: user.userId, name: user.name }).catch((e) =>
+        console.warn('[Email] welcome failed:', e.message),
+      );
+    }
+    res.status(isNew ? 201 : 200).json({ user, isNew });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/users/:userId', async (req, res) => {
+  try {
+    const user = await userStorage.lookupUser(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/appointments/:id', async (req, res) => {
+  try {
+    const appt = await apptStorage.updateAppointment(req.params.id, req.body);
+    if (!appt) return res.status(404).json({ error: 'Not found' });
+    broadcastStaff({ type: 'APPOINTMENT_UPDATED', appointment: appt });
+    res.json(appt);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 staffWss.on('connection', (ws) => {
   staffClients.add(ws);
   storage
@@ -120,11 +186,13 @@ patientWss.on('connection', (ws) => {
   let sessionPromise = null;
   let closed = false;
   let audioChunkCount = 0;
+  let sessionUser = null;
 
   console.log('Patient WS connected');
   sendJson(ws, { type: 'session', status: 'ready' });
 
-  function startSession({ mode = 'clinic', languagePreference = 'auto' }) {
+  function startSession({ mode = 'clinic', languagePreference = 'auto', user = null }) {
+    sessionUser = user;
     if (!isValidMode(mode)) {
       sendJson(ws, {
         type: 'session',
@@ -141,6 +209,7 @@ patientWss.on('connection', (ws) => {
       storage,
       mode,
       languagePreference,
+      userContext: sessionUser,
     })
       .then((session) => {
         geminiSession = session;
@@ -232,6 +301,7 @@ server.on('upgrade', (request, socket, head) => {
 
 try {
   await storage.connectDatabase();
+  await apptStorage.seedIfEmpty();
   console.log('VoiceBridge MongoDB connected');
 } catch (error) {
   console.warn(`VoiceBridge MongoDB unavailable: ${error.message}`);

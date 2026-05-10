@@ -88,15 +88,21 @@ export function getTemplate(mode) {
 
 export function buildSystemInstruction(mode, languagePreference = 'auto') {
   const template = getTemplate(mode);
-  const preferredLanguage =
-    languagePreference && languagePreference !== 'auto'
-      ? `The patient selected this language preference: ${languagePreference}.`
-      : 'Auto-detect the patient language and speak in that language.';
+  const isSignLanguage = languagePreference === 'sign_language';
 
-  return `You are VoiceBridge, a calm, professional multilingual voice intake assistant for frontline social-good organizations.
-${preferredLanguage}
+  const languageInstruction = isSignLanguage
+    ? `The patient is deaf or non-verbal and will communicate using sign language (ASL or another sign system) via camera. Do NOT expect voice input. Watch the camera feed continuously. Interpret all signing and treat it exactly as you would spoken input. Speak your questions and responses aloud so staff can hear. When you see signing begin, interpret it immediately.`
+    : languagePreference && languagePreference !== 'auto'
+      ? `The patient selected this language preference: ${languagePreference}. Respond in that language.`
+      : 'Auto-detect the patient language and respond in that language.';
+
+  return `You are VoiceBridge, a calm, professional multilingual intake assistant for frontline social-good organizations.
+${languageInstruction}
 You are currently running ${template.label} mode.
 Ask one question at a time. Use plain language. Be patient, accessible, and nonjudgmental.
+
+Visual input: If the patient holds up a document, insurance card, ID, pill bottle, prescription label, or any text to the camera, immediately read the relevant text aloud and extract any intake-relevant information from it (name, insurance ID, medication name, dosage, etc.). Do not wait for them to speak — visual input is a complete and valid channel. Describe what you read so the patient knows you saw it.
+
 Collect the required fields before calling finalize_intake:
 ${template.requiredFields.map((field) => `- ${field}`).join('\n')}
 
@@ -108,6 +114,7 @@ Helpful next-step examples: ${template.nextStepExamples.join('; ')}.
 
 If a red flag appears, immediately call tag_urgency before continuing.
 Use lookup_resources when local resources would help staff route the case.
+When urgency is HIGH or CRITICAL, or when the patient clearly needs follow-up care (nurse triage, social worker, interpreter, clinic review), call schedule_appointment — do this alongside or just after finalize_intake.
 When enough information is collected, call finalize_intake with:
 - mode
 - language

@@ -26,6 +26,7 @@ const languages = [
   { value: 'Spanish', label: 'Spanish' },
   { value: 'Mandarin', label: 'Mandarin' },
   { value: 'French', label: 'French' },
+  { value: 'sign_language', label: 'Sign Language (ASL/visual)' },
 ];
 
 function detectLanguageBadge(text) {
@@ -55,11 +56,22 @@ export default function PatientView() {
   const [sessionLoading, setSessionLoading] = useState(false);
   const [sessionStatus, setSessionStatus] = useState('Choose a help type to begin.');
   const [cameraOn, setCameraOn] = useState(false);
+
+  // User identification
+  const [isReturning, setIsReturning] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [userName, setUserName] = useState('');
+  const [userError, setUserError] = useState('');
+  const [sessionUser, setSessionUser] = useState(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const cameraStreamRef = useRef(null);
   const cameraTimerRef = useRef(null);
 
+  // Fix #2: accumulate transcript chunks into one bubble per speaker turn
   const handleSocketMessage = useCallback((message) => {
     if (message.type === 'session') {
       if (message.status === 'connected') {
@@ -67,11 +79,7 @@ export default function PatientView() {
         setSessionLoading(false);
         setSessionStatus(`${modes.find((item) => item.id === message.mode)?.label || 'VoiceBridge'} mode is live.`);
       }
-
-      if (message.status === 'ready') {
-        setSessionStatus('Choose a help type to begin.');
-      }
-
+      if (message.status === 'ready') setSessionStatus('Choose a help type to begin.');
       if (message.status === 'error') {
         setSessionStarted(false);
         setSessionLoading(false);
@@ -79,23 +87,18 @@ export default function PatientView() {
       }
     }
 
-    if (message.type !== 'transcript' || !message.text) {
-      return;
-    }
+    if (message.type !== 'transcript' || !message.text) return;
 
-    setConversation((current) => [
-      ...current,
-      {
-        id: `${Date.now()}-${current.length}`,
-        role: message.role,
-        text: message.text,
-      },
-    ]);
+    setConversation((current) => {
+      const last = current[current.length - 1];
+      if (last && last.role === message.role) {
+        return [...current.slice(0, -1), { ...last, text: last.text + ' ' + message.text }];
+      }
+      return [...current, { id: `${Date.now()}-${current.length}`, role: message.role, text: message.text }];
+    });
 
     if (message.role === 'model') {
-      setLanguageBadge((current) =>
-        current === 'AUTO' ? detectLanguageBadge(message.text) : current,
-      );
+      setLanguageBadge((current) => current === 'AUTO' ? detectLanguageBadge(message.text) : current);
     }
   }, []);
 
@@ -107,16 +110,43 @@ export default function PatientView() {
     incomingMessage: lastMessage,
   });
 
-  function startSession() {
+  async function startSession() {
+    setUserError('');
+    let user = sessionUser;
+
+    if (!user) {
+      if (isReturning) {
+        if (!userId.trim()) { setUserError('Enter your VoiceBridge ID.'); return; }
+        try {
+          const res = await fetch(`http://${window.location.hostname}:3001/users/${userId.trim().toUpperCase()}`);
+          if (!res.ok) { setUserError('ID not found. Check your ID or register as a new patient.'); return; }
+          const data = await res.json();
+          user = data.user;
+        } catch { setUserError('Could not reach server.'); return; }
+      } else if (email.trim()) {
+        try {
+          const res = await fetch(`http://${window.location.hostname}:3001/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), phone: phone.trim(), name: userName.trim(), language: languagePreference }),
+          });
+          const data = await res.json();
+          user = data.user;
+          if (data.isNew) setSessionStatus(`Welcome! Your VoiceBridge ID is ${user.userId}`);
+        } catch { setUserError('Could not register. Continuing as guest.'); }
+      }
+    }
+
+    setSessionUser(user);
     setConversation([]);
     setSessionLoading(true);
-    setLanguageBadge(languagePreference === 'auto' ? 'AUTO' : languagePreference.slice(0, 2).toUpperCase());
-    setSessionStatus('Connecting to VoiceBridge...');
-    send({
-      type: 'start_session',
-      mode,
-      languagePreference,
-    });
+    setLanguageBadge(
+      languagePreference === 'auto' ? 'AUTO'
+      : languagePreference === 'sign_language' ? 'ASL'
+      : languagePreference.slice(0, 2).toUpperCase()
+    );
+    if (!sessionStatus.startsWith('Welcome')) setSessionStatus('Connecting to VoiceBridge...');
+    send({ type: 'start_session', mode, languagePreference, user });
   }
 
   function startNewIntake() {
@@ -124,12 +154,18 @@ export default function PatientView() {
     window.location.reload();
   }
 
+  const visualPingRef = useRef(null);
+
   async function toggleCamera() {
     if (cameraOn) {
       window.clearInterval(cameraTimerRef.current);
+      window.clearInterval(visualPingRef.current);
       cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
       cameraStreamRef.current = null;
       setCameraOn(false);
+      if (sessionStarted) {
+        send({ type: 'text', text: "I'm done. Please interpret what you just saw — any sign language, document, card, or text — and continue the intake." });
+      }
       return;
     }
 
@@ -138,6 +174,10 @@ export default function PatientView() {
     videoRef.current.srcObject = stream;
     await videoRef.current.play();
     setCameraOn(true);
+
+    if (sessionStarted) {
+      send({ type: 'text', text: 'The patient has turned on their camera. Watch for documents, cards, pill bottles, or sign language. Respond to what you see.' });
+    }
 
     cameraTimerRef.current = window.setInterval(() => {
       const video = videoRef.current;
@@ -154,11 +194,18 @@ export default function PatientView() {
       const jpeg = canvas.toDataURL('image/jpeg', 0.72).split(',')[1];
       send({ type: 'video', mimeType: 'image/jpeg', data: jpeg });
     }, 1000);
+
+    if (languagePreference === 'sign_language' && sessionStarted) {
+      visualPingRef.current = window.setInterval(() => {
+        send({ type: 'text', text: 'What is the patient signing right now?' });
+      }, 4000);
+    }
   }
 
   useEffect(
     () => () => {
       window.clearInterval(cameraTimerRef.current);
+      window.clearInterval(visualPingRef.current);
       cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
     },
     [],
@@ -238,6 +285,28 @@ export default function PatientView() {
                 ))}
               </select>
             </label>
+
+            <div className="user-id-section">
+              <label className="returning-toggle">
+                <input type="checkbox" checked={isReturning} onChange={(e) => { setIsReturning(e.target.checked); setUserError(''); }} />
+                I have a VoiceBridge ID (returning patient)
+              </label>
+              {isReturning ? (
+                <input
+                  className="user-id-input"
+                  placeholder="VoiceBridge ID — e.g. VB-0001"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              ) : (
+                <div className="new-user-fields">
+                  <input placeholder="Email address (optional — for confirmation)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <input placeholder="Phone number (optional)" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  <input placeholder="Your name (optional)" value={userName} onChange={(e) => setUserName(e.target.value)} />
+                </div>
+              )}
+              {userError && <p className="user-error">{userError}</p>}
+            </div>
 
             <button className="start-session-button" disabled={!connected} type="button" onClick={startSession}>
               Start VoiceBridge intake

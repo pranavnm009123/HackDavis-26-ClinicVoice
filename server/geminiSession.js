@@ -97,6 +97,32 @@ const functionDeclarations = [
       required: ['category', 'city'],
     },
   },
+  {
+    name: 'schedule_appointment',
+    description: 'Create a follow-up appointment for the patient and notify staff. Call this when urgency is HIGH or CRITICAL, or when the patient clearly needs nurse triage, a social worker, an interpreter, or a clinic review.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        patient_name: { type: Type.STRING },
+        appointment_type: {
+          type: Type.STRING,
+          enum: ['nurse_triage', 'clinic_review', 'interpreter', 'social_worker', 'emergency_escalation'],
+        },
+        urgency: {
+          type: Type.STRING,
+          enum: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+        },
+        reason: { type: Type.STRING },
+        suggested_time: {
+          type: Type.STRING,
+          enum: ['ASAP', 'Today', 'Within 48h', 'This week'],
+        },
+        notes: { type: Type.STRING },
+        intake_id: { type: Type.STRING },
+      },
+      required: ['patient_name', 'appointment_type', 'urgency', 'reason', 'suggested_time'],
+    },
+  },
 ];
 
 function sendJson(ws, payload) {
@@ -182,6 +208,7 @@ async function handleToolCall(message, session, broadcast, storage, context) {
           broadcast,
           storage,
           context,
+          userContext,
         );
 
         return {
@@ -211,6 +238,7 @@ export async function createGeminiSession({
   storage = defaultStorage,
   mode = 'clinic',
   languagePreference = 'auto',
+  userContext = null,
 }) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is required to create a Gemini Live session.');

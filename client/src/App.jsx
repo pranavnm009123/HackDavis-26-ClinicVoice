@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AnalyticsView from './AnalyticsView.jsx';
+import AppointmentsView from './AppointmentsView.jsx';
 import PatientView from './PatientView.jsx';
 import StaffView from './StaffView.jsx';
 
@@ -770,6 +771,23 @@ dd {
 
 .list-action-btn:disabled { background: #b5c1ba; cursor: default; }
 
+.user-id-section {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px; background: rgba(36,87,69,0.05); border-radius: 12px;
+  border: 1px solid rgba(36,87,69,0.12);
+}
+.returning-toggle {
+  display: flex; align-items: center; gap: 8px; font-size: 0.88rem;
+  font-weight: 600; color: #143329; cursor: pointer;
+}
+.returning-toggle input { width: 16px; height: 16px; cursor: pointer; }
+.user-id-input, .new-user-fields input {
+  padding: 9px 12px; border: 1px solid rgba(36,87,69,0.2); border-radius: 10px;
+  font: inherit; font-size: 0.9rem; background: #fff; width: 100%;
+}
+.new-user-fields { display: flex; flex-direction: column; gap: 6px; }
+.user-error { color: #be2020; font-size: 0.82rem; margin: 0; }
+
 /* ── Analytics page ──────────────────────────────────────── */
 .analytics-shell {
   max-width: 1240px;
@@ -879,6 +897,63 @@ dd {
 
   .analytics-shell { padding: 16px; }
   .list-summary { max-width: 200px; }
+  .appt-table-wrap { overflow-x: auto; }
+  .appt-form-grid { grid-template-columns: 1fr; }
+}
+
+.appt-table-wrap { overflow-x: auto; margin-top: 16px; }
+.appt-table {
+  width: 100%; border-collapse: collapse; font-size: 0.88rem;
+}
+.appt-table th {
+  text-align: left; padding: 8px 12px; background: rgba(36,87,69,0.07);
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #4a6b5a;
+  border-bottom: 1px solid rgba(36,87,69,0.14);
+}
+.appt-table td { padding: 10px 12px; border-bottom: 1px solid rgba(36,87,69,0.08); vertical-align: top; }
+.appt-row:hover td { background: rgba(36,87,69,0.03); }
+.bot-row td:first-child { border-left: 3px solid #3a7d5a; }
+.appt-name { font-weight: 600; white-space: nowrap; }
+.appt-reason { max-width: 260px; }
+.appt-notes { color: #6b7a74; font-size: 0.82rem; }
+.appt-time { white-space: nowrap; font-weight: 600; color: #143329; }
+.urgency-chip {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+}
+.source-chip {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  font-size: 0.72rem; font-weight: 600;
+}
+.source-chip.bot { background: #e0f0e8; color: #2a6b4a; }
+.source-chip.staff { background: #e8edf0; color: #3a5060; }
+.appt-status { font-size: 0.82rem; color: #4a6b5a; text-transform: capitalize; }
+.appt-status.pending { color: #b38b08; }
+.appt-status.confirmed { color: #2a6b4a; }
+.appt-status.completed { color: #6b7a74; }
+.appt-status.cancelled { color: #be2020; text-decoration: line-through; }
+.appt-actions { display: flex; gap: 6px; white-space: nowrap; }
+.appt-actions button {
+  padding: 4px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+  background: #e0f0e8; color: #143329; font-weight: 600;
+}
+.appt-actions .cancel-btn { background: #fde8e8; color: #be2020; }
+.add-appt-btn {
+  padding: 8px 18px; border-radius: 12px; cursor: pointer;
+  background: #143329; color: #fff; font-weight: 600; font-size: 0.9rem;
+}
+.appt-form {
+  background: rgba(36,87,69,0.04); border: 1px solid rgba(36,87,69,0.14);
+  border-radius: 16px; padding: 20px; margin: 16px 0;
+}
+.appt-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
+}
+.appt-form-wide { grid-column: 1 / -1; }
+.appt-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: #4a6b5a; }
+.appt-form input, .appt-form select {
+  padding: 8px 12px; border: 1px solid rgba(36,87,69,0.2); border-radius: 8px;
+  font: inherit; font-size: 0.9rem; background: #fff;
 }
 `;
 
@@ -889,6 +964,7 @@ function App() {
       <Routes>
         <Route element={<PatientView />} path="/patient" />
         <Route element={<StaffView />} path="/staff" />
+        <Route element={<AppointmentsView />} path="/staff/appointments" />
         <Route element={<AnalyticsView />} path="/staff/analytics" />
         <Route element={<Navigate replace to="/patient" />} path="*" />
       </Routes>
