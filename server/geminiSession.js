@@ -321,7 +321,7 @@ export async function createGeminiSession({
       },
       onmessage: async (message) => {
         forwardServerContent(message, patientWs);
-        await handleToolCall(message, session, broadcast, storage, { mode }, userContext);
+        await handleToolCall(message, session, broadcast, storage, { mode, languagePreference }, userContext);
       },
       onerror: (error) => {
         sendJson(patientWs, {

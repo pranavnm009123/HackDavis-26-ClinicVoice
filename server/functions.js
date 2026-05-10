@@ -42,6 +42,70 @@ function getPatientCoords(city) {
   return match ? match[1] : null;
 }
 
+function getUrgencyLevel(card, args) {
+  const rawLevel =
+    card?.urgency?.level ||
+    card?.urgency ||
+    args?.urgency ||
+    'LOW';
+  const level = String(rawLevel).toUpperCase();
+  return ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(level) ? level : 'LOW';
+}
+
+function getSpecialization(mode, urgency) {
+  if (urgency === 'CRITICAL' || urgency === 'HIGH') return 'general_practice';
+  if (mode === 'shelter') return 'social_work';
+  return 'general_practice';
+}
+
+async function createFollowUpAppointment({
+  args,
+  card,
+  storedCard,
+  structuredFields,
+  mode,
+  broadcast,
+  userContext,
+}) {
+  const urgency = getUrgencyLevel(card, args);
+  const appointment = await appointmentsStorage.saveAppointment({
+    id: `intake-${storedCard.id}`,
+    intake_id: storedCard.id,
+    patient_name:
+      structuredFields.full_name ||
+      card?.patient?.name ||
+      userContext?.name ||
+      'Unknown',
+    specialization: getSpecialization(mode, urgency),
+    urgency,
+    reason:
+      structuredFields.reason_for_visit ||
+      structuredFields.bed_or_resource_need ||
+      structuredFields.requested_supplies ||
+      card?.visit?.reason ||
+      args.english_summary ||
+      args.transcript ||
+      'Follow-up from VoiceBridge intake',
+    source: 'bot',
+    status: 'pending',
+    notes: card?.recommended_next_step || args.recommended_next_step || '',
+    timestamp: new Date().toISOString(),
+  });
+
+  broadcast({ type: 'NEW_APPOINTMENT', appointment });
+
+  if (userContext?.email) {
+    sendAppointmentConfirmation({
+      to: userContext.email,
+      userId: userContext.userId,
+      name: userContext.name,
+      appointment,
+    }).catch((e) => console.warn('[Email] appt confirmation failed:', e.message));
+  }
+
+  return appointment;
+}
+
 export async function tag_urgency(args, broadcast, context = {}) {
   broadcast({
     type: 'URGENCY_ALERT',
@@ -51,7 +115,7 @@ export async function tag_urgency(args, broadcast, context = {}) {
   return { success: true };
 }
 
-export async function finalize_intake(args, broadcast, storage = defaultStorage, context = {}) {
+export async function finalize_intake(args, broadcast, storage = defaultStorage, context = {}, userContext = null) {
   const id = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const structuredFields = parseJsonish(args.structured_fields, {});
@@ -86,6 +150,22 @@ export async function finalize_intake(args, broadcast, storage = defaultStorage,
     enrichIntakeWithBackboard(storedCard, args, broadcast, storage).catch((e) =>
       console.warn('[Backboard] resource enrichment failed:', e.message),
     );
+  }
+
+  if (context.languagePreference === 'sign_language') {
+    try {
+      await createFollowUpAppointment({
+        args,
+        card,
+        storedCard,
+        structuredFields,
+        mode,
+        broadcast,
+        userContext,
+      });
+    } catch (error) {
+      console.warn('[Appointments] auto follow-up failed:', error.message);
+    }
   }
 
   return { success: true, id: storedCard.id };
@@ -302,7 +382,7 @@ export async function dispatchFunctionCall(name, args, broadcast, storage = defa
   const handler = handlers[name];
   if (!handler) return { success: false, error: `Unknown function: ${name}` };
 
-  if (name === 'finalize_intake') return handler(args, broadcast, storage, context);
+  if (name === 'finalize_intake') return handler(args, broadcast, storage, context, userContext);
   if (name === 'tag_urgency') return handler(args, broadcast, context);
   if (name === 'book_appointment') return handler(args, broadcast, userContext);
   return handler(args);

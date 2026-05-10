@@ -94,25 +94,70 @@ export function getTemplate(mode) {
   return intakeTemplates[mode] || intakeTemplates.clinic;
 }
 
+function getQuestionFlowGuidance(mode) {
+  if (mode === 'clinic') {
+    return `Clinic question order guidance:
+- Ask the reason for visit first.
+- Ask symptom_duration as its own separate question and include answer units. Example: "How long have you had the headache — hours, days, weeks, or since what time today?"
+- After the patient answers duration, ask severity_1_to_10 as its own separate question. Example: "On a scale from 1 to 10, how severe is the pain?"
+- Do not combine duration and severity in the same turn.
+- Do not ask about insurance/cost, accessibility, or interpreter needs until the medical concern, duration, severity, and urgent warning signs are collected.`;
+  }
+
+  if (mode === 'shelter') {
+    return `Shelter question order guidance:
+- Ask current_housing_status first.
+- Ask current_location as its own separate question. Example: "What city or area are you in right now?"
+- Ask safety_risk as its own separate question. Example: "Are you in immediate danger right now?"
+- Ask family_size as its own separate question. Example: "How many people need shelter with you?"
+- Ask pets as its own separate question. Example: "Do you have any pets with you?"
+- Ask mobility_or_accessibility_needs as its own separate question.
+- Ask bed_or_resource_need as its own separate question.
+- Ask best_contact_method last.
+- Do not combine location, safety, family size, pets, mobility, bed need, or contact method in one turn.`;
+  }
+
+  return `Food aid question order guidance:
+- Ask household_size first.
+- Ask zip_code_or_location as its own separate question. Example: "What zip code or neighborhood are you in?"
+- Ask food_urgency as its own separate question and include concrete time options. Example: "Do you need food today, tomorrow, or later this week?"
+- Ask dietary_restrictions as its own separate question.
+- Ask transportation_limitations as its own separate question.
+- Ask requested_supplies as its own separate question.
+- Ask accessibility_needs as its own separate question.
+- Ask best_contact_method last.
+- Do not combine household size, location, urgency timing, diet needs, transportation, supplies, accessibility, or contact method in one turn.`;
+}
+
 export function buildSystemInstruction(mode, languagePreference = 'auto') {
   const template = getTemplate(mode);
   const isSignLanguage = languagePreference === 'sign_language';
 
   const languageInstruction = isSignLanguage
-    ? `The patient is deaf or non-verbal and will communicate using sign language (ASL or another sign system) via camera. Do NOT expect voice input. Watch the camera feed continuously. Interpret all signing and treat it exactly as you would spoken input. Speak your questions and responses aloud so staff can hear. When you see signing begin, interpret it immediately.`
+    ? `The patient is deaf or non-verbal and will communicate using sign language (ASL or another sign system) via camera. Do NOT expect voice input. Speak your questions and responses aloud so staff can hear. Ask one short question, then wait silently while the patient signs. The client automatically sends one cue after a short signing window; interpret the recent camera frames only at that cue, confirm what you understood, and continue with the next new question. Do not repeat the same question unless the signing was unclear.`
     : languagePreference && languagePreference !== 'auto'
       ? `The patient selected this language preference: ${languagePreference}. Respond in that language.`
       : 'Auto-detect the patient language and respond in that language.';
+  const turnTakingInstruction = isSignLanguage
+    ? `Strict ASL turn-taking rule: every assistant turn may ask for exactly one missing field. Never ask two questions in one sentence, never ask "how long and how severe" together, and avoid "and" / "also" follow-up questions. If you need duration and severity, ask duration now, wait for the signed answer, then ask severity in the next turn.
+If the patient answers only part of a previous combined question, accept that answer and ask only the next missing field. Do not repeat fields already answered.`
+    : '';
+  const questionFlowGuidance = isSignLanguage ? `\n${getQuestionFlowGuidance(template.mode)}\n` : '';
+  const appointmentInstruction = isSignLanguage
+    ? 'For finalized ASL intakes, the server automatically creates a pending staff follow-up row after finalize_intake. If the patient needs a confirmed appointment during the conversation, use get_available_slots and book_appointment as described below.'
+    : '';
 
   return `You are VoiceBridge, a calm, professional multilingual intake assistant for frontline social-good organizations.
 ${languageInstruction}
 You are currently running ${template.label} mode.
 Ask one question at a time. Use plain language. Be patient, accessible, and nonjudgmental.
+${turnTakingInstruction}
 
 Visual input: If the patient holds up a document, insurance card, ID, pill bottle, prescription label, or any text to the camera, immediately read the relevant text aloud and extract any intake-relevant information from it (name, insurance ID, medication name, dosage, etc.). Do not wait for them to speak — visual input is a complete and valid channel. Describe what you read so the patient knows you saw it.
 
 Collect the required fields before calling finalize_intake:
 ${template.requiredFields.map((field) => `- ${field}`).join('\n')}
+${questionFlowGuidance}
 
 Urgency rules for this mode:
 ${template.urgencyRules.map((rule) => `- ${rule}`).join('\n')}
@@ -126,6 +171,7 @@ If a red flag appears, immediately call tag_urgency before continuing.
 For CRITICAL or HIGH urgency, call find_nearest_facility with type "hospital" and the patient's city. Read the nearest ER or hospital name, address, and phone number aloud so the patient knows where to go immediately.
 
 Use lookup_resources when local resources would help staff route the case.
+${appointmentInstruction}
 
 HOUSING MODE GUIDANCE — only applies when mode is shelter:
 You help with ALL housing needs, not just emergencies. When someone asks about housing:

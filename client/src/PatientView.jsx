@@ -8,6 +8,9 @@ const modes = [
   { id: 'food_aid', label: 'Food Aid', description: 'Household size, diet needs, transport limits, zip code, supplies.' },
 ];
 
+const TRANSCRIPT_MERGE_WINDOW_MS = 2200;
+const ASL_AUTO_INTERPRET_DELAY_MS = 7000;
+
 function detectLanguageBadge(text) {
   const normalized = text.toLowerCase();
   if (/[¿¡ñáéíóú]/.test(normalized) || /\b(hola|gracias|dolor|tiene|puede)\b/.test(normalized)) return 'ES';
@@ -44,6 +47,7 @@ export default function PatientView() {
   const [sessionStatus, setSessionStatus] = useState('');
   const [sessionEnded, setSessionEnded] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  const [signedResponsePending, setSignedResponsePending] = useState(false);
 
   const [isReturning, setIsReturning] = useState(false);
   const [userId, setUserId] = useState('');
@@ -57,20 +61,33 @@ export default function PatientView() {
   const canvasRef = useRef(null);
   const cameraStreamRef = useRef(null);
   const cameraTimerRef = useRef(null);
-  const visualPingRef = useRef(null);
   const pendingAutoStartRef = useRef(null);
+  const aslAutoTimerRef = useRef(null);
+  const signedResponseCountRef = useRef(0);
+
+  const addConversationBubble = useCallback((role, text) => {
+    setConversation((current) => [
+      ...current,
+      { id: `local-${Date.now()}-${current.length}`, role, text, receivedAt: Date.now() },
+    ]);
+  }, []);
 
   const handleSocketMessage = useCallback((message) => {
     if (message.type === 'session') {
       if (message.status === 'connected') {
         setSessionStarted(true);
         setSessionLoading(false);
-        setSessionStatus(`${modes.find((item) => item.id === message.mode)?.label || 'VoiceBridge'} mode is live.`);
+        setSessionStatus(
+          languagePreference === 'sign_language'
+            ? 'ASL mode is live. Turn on the camera and sign after each question.'
+            : `${modes.find((item) => item.id === message.mode)?.label || 'VoiceBridge'} mode is live.`,
+        );
       }
       if (message.status === 'ready') setSessionStatus('');
       if (message.status === 'error') {
         setSessionStarted(false);
         setSessionLoading(false);
+        setSignedResponsePending(false);
         setSessionStatus(message.message || 'Session error.');
       }
       if (message.status === 'closed') {
@@ -80,18 +97,47 @@ export default function PatientView() {
 
     if (message.type !== 'transcript' || !message.text) return;
 
+    const receivedAt = Date.now();
+    const normalizedText = message.text.trim().replace(/\s+/g, ' ').toLowerCase();
+
     setConversation((current) => {
       const last = current[current.length - 1];
-      if (last && last.role === message.role) {
-        return [...current.slice(0, -1), { ...last, text: last.text + ' ' + message.text }];
+
+      if (languagePreference !== 'sign_language') {
+        if (last && last.role === message.role) {
+          return [...current.slice(0, -1), { ...last, text: `${last.text} ${message.text}` }];
+        }
+        return [...current, { id: `${Date.now()}-${current.length}`, role: message.role, text: message.text }];
       }
-      return [...current, { id: `${Date.now()}-${current.length}`, role: message.role, text: message.text }];
+
+      if (
+        last &&
+        last.role === message.role &&
+        last.text.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedText &&
+        receivedAt - (last.receivedAt || 0) < 8000
+      ) {
+        return current;
+      }
+
+      if (
+        last &&
+        last.role === message.role &&
+        receivedAt - (last.receivedAt || 0) < TRANSCRIPT_MERGE_WINDOW_MS
+      ) {
+        return [...current.slice(0, -1), { ...last, text: `${last.text} ${message.text}`, receivedAt }];
+      }
+
+      return [...current, { id: `${receivedAt}-${current.length}`, role: message.role, text: message.text, receivedAt }];
     });
 
     if (message.role === 'model') {
+      setSignedResponsePending(false);
+      if (languagePreference === 'sign_language') {
+        setSessionStatus('Sign your response now. VoiceBridge will interpret automatically.');
+      }
       setLanguageBadge((current) => current === 'AUTO' ? detectLanguageBadge(message.text) : current);
     }
-  }, []);
+  }, [languagePreference]);
 
   const { connected, lastMessage, error: socketError, send } = useSocket('/ws/patient', {
     onMessage: handleSocketMessage,
@@ -104,12 +150,18 @@ export default function PatientView() {
   async function toggleCamera() {
     if (cameraOn) {
       window.clearInterval(cameraTimerRef.current);
-      window.clearInterval(visualPingRef.current);
+      window.clearTimeout(aslAutoTimerRef.current);
       cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
       cameraStreamRef.current = null;
       setCameraOn(false);
+      setSignedResponsePending(false);
       if (sessionStarted) {
-        send({ type: 'text', text: "I'm done. Please interpret what you just saw — any sign language, document, card, or text — and continue the intake." });
+        send({
+          type: 'text',
+          text: languagePreference === 'sign_language'
+            ? 'The patient has turned off the camera. Pause visual ASL intake until the camera is on again.'
+            : 'The patient has turned off the camera. Continue the intake using voice only.',
+        });
       }
       return;
     }
@@ -121,7 +173,12 @@ export default function PatientView() {
     setCameraOn(true);
 
     if (sessionStarted) {
-      send({ type: 'text', text: 'The patient has turned on their camera. Watch for documents, cards, pill bottles, or sign language. Respond to what you see.' });
+      send({
+        type: 'text',
+        text: languagePreference === 'sign_language'
+          ? 'The patient has turned on their camera for ASL. Ask exactly one short intake question, then wait for an automatic client cue before interpreting the signed answer. Do not repeat the same question while waiting. Do not combine fields in one question. If asking duration or urgency timing, include concrete choices like hours, days, weeks, today, tomorrow, or later this week.'
+          : 'The patient has turned on their camera. Watch for documents, cards, pill bottles, or other visual information. Respond when visual information is clearly presented.',
+      });
     }
 
     cameraTimerRef.current = window.setInterval(() => {
@@ -135,12 +192,6 @@ export default function PatientView() {
       const jpeg = canvas.toDataURL('image/jpeg', 0.72).split(',')[1];
       send({ type: 'video', mimeType: 'image/jpeg', data: jpeg });
     }, 1000);
-
-    if (languagePreference === 'sign_language' && sessionStarted) {
-      visualPingRef.current = window.setInterval(() => {
-        send({ type: 'text', text: 'What is the patient signing right now?' });
-      }, 4000);
-    }
   }
 
   async function startSession(langPref = languagePreference) {
@@ -173,6 +224,9 @@ export default function PatientView() {
     setSessionUser(user);
     setConversation([]);
     setSessionLoading(true);
+    setSignedResponsePending(false);
+    signedResponseCountRef.current = 0;
+    window.clearTimeout(aslAutoTimerRef.current);
     setLanguageBadge(
       langPref === 'auto' ? 'AUTO'
       : langPref === 'sign_language' ? 'ASL'
@@ -197,7 +251,7 @@ export default function PatientView() {
   function hangUp() {
     stopRecording();
     window.clearInterval(cameraTimerRef.current);
-    window.clearInterval(visualPingRef.current);
+    window.clearTimeout(aslAutoTimerRef.current);
     cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
     cameraStreamRef.current = null;
     window.location.reload();
@@ -234,10 +288,51 @@ export default function PatientView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStarted]);
 
+  useEffect(() => {
+    window.clearTimeout(aslAutoTimerRef.current);
+
+    if (
+      languagePreference !== 'sign_language' ||
+      !sessionStarted ||
+      !cameraOn ||
+      signedResponsePending
+    ) {
+      return undefined;
+    }
+
+    const lastMessage = conversation[conversation.length - 1];
+    if (!lastMessage || lastMessage.role !== 'model') {
+      return undefined;
+    }
+
+    aslAutoTimerRef.current = window.setTimeout(() => {
+      signedResponseCountRef.current += 1;
+      addConversationBubble('user', `Signed response ${signedResponseCountRef.current} captured automatically.`);
+      setSignedResponsePending(true);
+      setSessionStatus('Interpreting signed response...');
+      send({
+        type: 'text',
+        text: 'The patient has had a short signing window after your last question. Interpret only the latest signing from the recent camera frames. Briefly confirm what you understood, then ask exactly one next intake question for one missing field. Do not repeat the previous question unless the signing was unclear. Do not combine fields in one question. If asking duration or urgency timing, include concrete choices like hours, days, weeks, today, tomorrow, or later this week.',
+      });
+    }, ASL_AUTO_INTERPRET_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(aslAutoTimerRef.current);
+    };
+  }, [
+    addConversationBubble,
+    cameraOn,
+    conversation,
+    languagePreference,
+    send,
+    sessionStarted,
+    signedResponsePending,
+  ]);
+
   useEffect(
     () => () => {
       window.clearInterval(cameraTimerRef.current);
-      window.clearInterval(visualPingRef.current);
+      window.clearTimeout(aslAutoTimerRef.current);
       cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
     },
     [],
@@ -393,9 +488,11 @@ export default function PatientView() {
             </div>
           ) : conversation.length === 0 ? (
             <div className="welcome-bubble">
-              {sessionStarted
-                ? "You're connected — the mic is active. Speak naturally."
-                : 'Pick a help type, then tap the mic to speak or the camera for sign language.'}
+              {sessionStarted && languagePreference === 'sign_language'
+                ? 'Turn on the camera and sign after each question. VoiceBridge will interpret automatically.'
+                : sessionStarted
+                  ? "You're connected — the mic is active. Speak naturally."
+                  : 'Pick a help type, then tap the mic to speak or the camera for sign language.'}
             </div>
           ) : (
             conversation.map((message) => (
