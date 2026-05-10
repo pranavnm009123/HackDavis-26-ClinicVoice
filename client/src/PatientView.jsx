@@ -83,13 +83,6 @@ export default function PatientView() {
   const [showEnglish, setShowEnglish] = useState(false);
   const [translations, setTranslations] = useState({});
 
-  const [isReturning, setIsReturning] = useState(false);
-  const [userId, setUserId] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [userName, setUserName] = useState('');
-  const [userError, setUserError] = useState('');
-  const [sessionUser, setSessionUser] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -229,33 +222,6 @@ export default function PatientView() {
   }
 
   async function startSession(langPref = languagePreference) {
-    setUserError('');
-    let user = sessionUser;
-
-    if (!user) {
-      if (isReturning) {
-        if (!userId.trim()) { setUserError('Enter your CowmunityCare ID.'); return; }
-        try {
-          const res = await fetch(`http://${window.location.hostname}:3001/users/${userId.trim().toUpperCase()}`);
-          if (!res.ok) { setUserError('ID not found. Check your ID or register as a new patient.'); return; }
-          const data = await res.json();
-          user = data.user;
-        } catch { setUserError('Could not reach server.'); return; }
-      } else if (email.trim()) {
-        try {
-          const res = await fetch(`http://${window.location.hostname}:3001/users`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim(), phone: phone.trim(), name: userName.trim(), language: langPref }),
-          });
-          const data = await res.json();
-          user = data.user;
-          if (data.isNew) setSessionStatus(`Welcome! Your CowmunityCare ID is ${user.userId}`);
-        } catch { setUserError('Could not register. Continuing as guest.'); }
-      }
-    }
-
-    setSessionUser(user);
     setConversation([]);
     setSessionLoading(true);
     setSignedResponsePending(false);
@@ -266,8 +232,8 @@ export default function PatientView() {
       : langPref === 'sign_language' ? 'ASL'
       : langPref.slice(0, 2).toUpperCase(),
     );
-    if (!sessionStatus.startsWith('Welcome')) setSessionStatus('Connecting to CowmunityCare...');
-    send({ type: 'start_session', mode, languagePreference: langPref, user });
+    setSessionStatus('Connecting to VoiceBridge...');
+    send({ type: 'start_session', mode, languagePreference: langPref, user: null });
   }
 
   async function startWithSpeech() {
@@ -462,34 +428,6 @@ export default function PatientView() {
               ))}
             </div>
 
-            <div className="user-id-section">
-              <label className="returning-toggle">
-                <input
-                  type="checkbox"
-                  checked={isReturning}
-                  onChange={(e) => { setIsReturning(e.target.checked); setUserError(''); }}
-                />
-                I have a CowmunityCare ID (returning patient)
-              </label>
-              {isReturning ? (
-                <input
-                  aria-label="CowmunityCare ID"
-                  autoComplete="off"
-                  className="user-id-input"
-                  placeholder="CowmunityCare ID — e.g. VB-0001"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                />
-              ) : (
-                <div className="new-user-fields">
-                  <input aria-label="Email address, optional for confirmation" autoComplete="email" placeholder="Email address (optional — for confirmation)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <input aria-label="Phone number, optional" autoComplete="tel" placeholder="Phone number (optional)" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                  <input aria-label="Your name, optional" autoComplete="name" placeholder="Your name (optional)" value={userName} onChange={(e) => setUserName(e.target.value)} />
-                </div>
-              )}
-              {userError && <p className="user-error" role="alert">{userError}</p>}
-            </div>
-
             <div className="input-mode-btns">
               <button
                 className="input-mode-btn is-speech"
@@ -542,7 +480,7 @@ export default function PatientView() {
               type="button"
               onClick={toggleEnglish}
             >
-              {showEnglish ? 'EN' : 'EN'} {showEnglish ? '✓' : '↔'} Translate
+              {showEnglish ? '✓ Showing English' : '↔ Translate to English'}
             </button>
           </div>
         )}

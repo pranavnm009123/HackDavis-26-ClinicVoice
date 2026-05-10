@@ -171,6 +171,46 @@ This section covers housing needs that are NOT emergencies: students looking for
 
 ---
 
+## Davis apartments — specific complexes (on-campus and off-campus)
+
+Use this section when a patient asks about specific apartment names, wants to know where to live near UC Davis, or asks about pricing and distances. Distances are from **UC Davis Memorial Union**.
+
+### On-campus apartments (UC Davis managed or partnered)
+
+| Name | Price range / month | Distance from MU | Website | Notes |
+|------|---------------------|------------------|---------|-------|
+| **Primero Grove** | $1,359 (studio) – $3,232 (4BR) | On campus | [housing.ucdavis.edu/apartments/primero-grove](https://housing.ucdavis.edu/apartments/primero-grove/) | Graduate & family housing; utilities included; private patios/balconies |
+| **Orchid Park (Orchard Park)** | $1,173 – $2,727 (2–4 BR) | On campus, northwest corner | [orchardpark.ucdavis.edu](https://orchardpark.ucdavis.edu/) | Newer complex; furnished/unfurnished; 11.5-month leases; grad students & families |
+| **Atriums at La Rue Park** | $1,383+ (studio – 2 BR) | On campus | [atriums.tandemproperties.com](https://atriums.tandemproperties.com/) | Tandem Properties managed; graduate-focused; 24-hour study lounge |
+| **Russell Park** | $1,241 – $2,050+ | On campus, Russell Blvd | [russellpark.tandemproperties.com](https://russellpark.tandemproperties.com/) | Tandem Properties managed; family-oriented; playground and childcare center on-site |
+| **Colleges at La Rue** | $1,377+ (1–4 BR) | On campus (near ARC) | [colleges.tandemproperties.com](https://colleges.tandemproperties.com/) | UC Davis students only; Tandem managed; 164 Orchard Park Dr |
+
+### Off-campus apartments
+
+| Name | Price range / month | Distance from MU | Website | Address | Notes |
+|------|---------------------|------------------|---------|---------|-------|
+| **University Commons** | $2,100+ (2 BR/1 BA) | ~1.3 miles / ~4 min by bus | [universitycommonsdavis.com](https://universitycommonsdavis.com/) | 707 Sycamore Ln, Davis | Near University Mall and Trader Joe's; short bike ride to campus |
+| **8th and Wake** | $742 – $859/bedroom (4 BR suites) | ~1.7 miles / ~5 min | [yolopropertymanagement.com/8th-and-wake](https://www.yolopropertymanagement.com/8th-and-wake) | 1440 Wake Forest Dr, Davis | One block from campus; fully furnished option; suite-style |
+| **Axis at Davis** | $820 – $1,619 (2–3 BR) | ~3.5 miles / ~7 min | [axisdavis.com](https://www.axisdavis.com/) | 2555 Research Park Dr, Davis | Newer (2025); resort-style amenities; pet-friendly |
+| **Identity Davis** | $521+/person (3–5 BR units) | ~1.5 miles / ~8 min walk | [identitydavis.com](https://www.identitydavis.com/) | 525 Oxford Cir, Davis | Built 2021; downtown; pool and fitness center |
+| **The Spoke** | $665 – $1,270 (1–2 BR) | ~1.5 miles / ~25 min walk or 5 min drive | [livethespoke.com](https://www.livethespoke.com/) | 801 J St, Davis | Downtown; three pools; Unitrans E and L lines |
+| **Sol at West Village** | $1,099+ (1–4 BR) | ~1.5 miles / ~4 min | [solatwestvillage.com](https://solatwestvillage.com/) | 1580 Jade St, Davis | Zero net energy; furnished available; UC Davis / Los Rios students only |
+| **Adobe at Evergreen** | $668+/person (1–4 BR) | ~3.1 miles / ~7 min | [adobe.tandemproperties.com](https://adobe.tandemproperties.com/) | 1500 Shasta Dr, Davis | UC Davis Housing Partner; Tandem managed |
+| **Piñon Apartments** | $1,399+ (1–3 BR) | ~1.7 miles / ~6 min | [tccproperties.net/property/pinon-apartments](https://www.tccproperties.net/property/pinon-apartments) | 555 Guava Ln, Davis | Across from UC Davis; near Trader Joe's; Unitrans B/C lines |
+| **Parkside Apartments** | $1,681+ (studio – 4 BR) | ~1.5 miles / ~8 min | [parkside-apartments.com](https://www.parkside-apartments.com/) | 1420 F St, Davis | 12 acres of park grounds; central Davis; Commuter 42A bus stop |
+| **University Court** | $1,700+ (1–2 BR, utilities incl.) | ~1.2 miles / ~4 min | [universitycourt.net](https://www.universitycourt.net/) | 515 Sycamore Ln, Davis | All utilities included; fully furnished; 50-week leases (Sept–Aug) |
+
+**Matching guidance for housing asks:**
+- **On-campus / affordable for families**: Primero Grove or Russell Park — utilities included, family-friendly.
+- **Graduate students wanting newer/modern**: Orchid Park, Atriums, Colleges at La Rue.
+- **Budget-conscious student, close to campus**: 8th and Wake (per-bedroom pricing), Identity Davis (multi-BR shared units).
+- **Downtown Davis vibe**: The Spoke, Identity Davis — walkable to restaurants and shops.
+- **Utilities-included convenience**: University Court.
+- **Zero net energy / sustainable**: Sol at West Village.
+- All distances are approximate; suggest patients verify via Google Maps for their specific address.
+
+---
+
 ## Emergency shelter (mode: `shelter` — urgent/crisis cases)
 
 | Name | Type | Who it fits | Phone | Area | Notes |

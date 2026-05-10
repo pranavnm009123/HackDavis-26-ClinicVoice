@@ -365,8 +365,7 @@ export async function createGeminiSession({
     model: MODEL,
     config: {
       responseModalities: ['AUDIO'],
-      /* Prefer minimal latency; Gemini 3.1 Live documents LOW for light reasoning. */
-      thinkingConfig: { thinkingLevel: 'MINIMAL' },
+      thinkingConfig: { thinkingLevel: 'LOW' },
       inputAudioTranscription: {},
       outputAudioTranscription: {},
       speechConfig: {
@@ -400,9 +399,12 @@ export async function createGeminiSession({
     },
   });
 
-  /* Gemini 3.1 Flash Live: incremental user content during the session should use
-     sendRealtimeInput, not sendClientContent (unless seeding history explicitly). */
-  session.sendRealtimeInput({ text: 'Hello.' });
+  /* Seed as a patient message so the model must respond by asking for the name.
+     Phrasing it as a patient request forces the correct first turn — the model
+     cannot respond to "ask me for my name" with a city question. */
+  session.sendRealtimeInput({
+    text: 'Hi. Please start by asking for my name.',
+  });
 
   return {
     sendAudio(base64Pcm) {

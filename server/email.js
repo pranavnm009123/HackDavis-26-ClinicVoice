@@ -42,17 +42,39 @@ export async function sendIntakeConfirmation({ to, name, card, mode, structuredF
   const summary = card?.english_summary || 'Your intake has been recorded.';
   const nextStep = card?.recommended_next_step || '';
   const resources = Array.isArray(card?.resource_matches) ? card.resource_matches : [];
+  const isUrgent = urgency === 'CRITICAL' || urgency === 'HIGH';
+
+  const urgentBanner = isUrgent ? `
+    <div style="background:${urgency === 'CRITICAL' ? '#ffebee' : '#fff3e0'};border:2px solid ${urgencyColor};border-radius:10px;padding:18px 20px;margin:0 0 20px">
+      <p style="color:${urgencyColor};font-weight:700;margin:0 0 8px;font-size:1.05rem">${urgency === 'CRITICAL' ? '⚠ Urgent — Please Act Now' : '⚠ Action Needed'}</p>
+      <p style="margin:0 0 6px">Your situation was flagged as <strong>${urgency}</strong>. Please use the resources listed below or call <strong>911</strong> if you are in immediate danger.</p>
+      ${nextStep ? `<p style="margin:10px 0 0;font-weight:600;color:#143329">${nextStep}</p>` : ''}
+    </div>` : '';
+
+  const resourceCardHtml = (r) => {
+    const n = typeof r === 'string' ? r : (r.name || '');
+    const address = r.address ? `<div style="color:#4a6b5a;font-size:0.88rem;margin-top:3px">${r.address}</div>` : '';
+    const phone = r.phone
+      ? `<div style="margin-top:5px"><a href="tel:${r.phone.replace(/[^0-9+]/g, '')}" style="color:#1d8f59;font-weight:600;text-decoration:none">${r.phone}</a></div>`
+      : '';
+    const hours = r.hours ? `<div style="color:#6b7a74;font-size:0.84rem;margin-top:2px">${r.hours}</div>` : '';
+    const rawUrl = r.url || '';
+    const href = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`) : '';
+    const urlDisplay = rawUrl.replace(/^https?:\/\//, '');
+    const urlHtml = href
+      ? `<div style="margin-top:5px"><a href="${href}" style="color:#1d8f59;font-size:0.88rem">${urlDisplay}</a></div>`
+      : '';
+    const why = r.why ? `<div style="color:#4a6b5a;font-size:0.85rem;font-style:italic;margin-top:5px">${r.why}</div>` : '';
+    const nextStepRes = r.nextStep ? `<div style="color:#143329;font-size:0.85rem;margin-top:5px"><strong>Next step:</strong> ${r.nextStep}</div>` : '';
+    return `<div style="background:#fff;border-radius:8px;padding:14px 16px;margin:10px 0;border:1px solid #d4e6d9">
+      <div style="font-weight:700;color:#143329;font-size:0.97rem">${n}</div>
+      ${address}${phone}${hours}${urlHtml}${why}${nextStepRes}
+    </div>`;
+  };
 
   const resourcesHtml = resources.length > 0
-    ? `<h3 style="color:#143329;margin-top:24px;font-size:1rem">Resources for You</h3>
-       <ul style="padding-left:20px;margin:8px 0">
-         ${resources.map((r) => {
-           const n = typeof r === 'string' ? r : (r.name || '');
-           const phone = r.phone ? ` &middot; ${r.phone}` : '';
-           const url = r.url ? ` &middot; <a href="https://${r.url}" style="color:#1d8f59">${r.url}</a>` : '';
-           return `<li style="margin-bottom:8px">${n}${phone}${url}</li>`;
-         }).join('')}
-       </ul>`
+    ? `<h3 style="color:#143329;margin:24px 0 4px;font-size:1rem">Resources for You</h3>
+       ${resources.map(resourceCardHtml).join('')}`
     : '';
 
   const info = await t.sendMail({
@@ -67,20 +89,21 @@ export async function sendIntakeConfirmation({ to, name, card, mode, structuredF
         </div>
         <div style="background:#f8faf8;padding:24px;border-radius:0 0 12px 12px">
           <p>Hi ${name || 'there'},</p>
-          <p>Your intake has been submitted. Here's a copy of your summary:</p>
+          <p>Here is a copy of your session summary and all recommended resources.</p>
+          ${urgentBanner}
           <div style="background:#fff;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid ${urgencyColor}">
             <p style="margin:0 0 6px;font-size:0.8rem;color:#6b7a74;text-transform:uppercase;font-weight:600">Summary</p>
             <p style="margin:0">${summary}</p>
           </div>
-          ${nextStep ? `<div style="background:#e8f5e9;border-radius:8px;padding:16px;margin:16px 0">
+          ${!isUrgent && nextStep ? `<div style="background:#e8f5e9;border-radius:8px;padding:16px;margin:16px 0">
             <p style="margin:0 0 4px;font-size:0.8rem;color:#2e7d32;font-weight:600">Recommended Next Step</p>
             <p style="margin:0">${nextStep}</p>
           </div>` : ''}
           ${resourcesHtml}
-          <p style="margin-top:24px;color:#4a6b5a">A staff member will follow up with you soon. If your situation becomes urgent, call 911 or go to the nearest emergency room.</p>
+          <p style="margin-top:24px;color:#4a6b5a">A staff member will follow up with you soon. If your situation becomes urgent, call <strong>911</strong> or go to the nearest emergency room.</p>
           <p style="color:#6b7a74;font-size:0.82rem;margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px">
-            VoiceBridge &middot; Free Clinic Intake System<br>
-            This email was sent to ${to} because you provided this address during intake.
+            VoiceBridge &middot; ${modeLabel}<br>
+            This email was sent to ${to} because you provided this address during your intake session.
           </p>
         </div>
       </div>

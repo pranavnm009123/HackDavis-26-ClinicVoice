@@ -259,6 +259,7 @@ h2 {
   background: rgba(255, 255, 255, 0.65);
 }
 
+
 .mode-picker h2 {
   max-width: 860px;
   font-size: clamp(1.5rem, 4vw, 2.3rem);
@@ -922,22 +923,6 @@ dd {
 
 .list-action-btn:disabled { background: #a8b8c8; cursor: default; }
 
-.user-id-section {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 14px 16px; background: rgba(13, 39, 78, 0.04); border-radius: 12px;
-  border: 1px solid var(--aggie-border);
-}
-.returning-toggle {
-  display: flex; align-items: center; gap: 8px; font-size: 0.88rem;
-  font-weight: 600; color: var(--aggie-blue); cursor: pointer;
-}
-.returning-toggle input { width: 16px; height: 16px; cursor: pointer; }
-.user-id-input, .new-user-fields input {
-  padding: 9px 12px; border: 1px solid var(--aggie-border); border-radius: 10px;
-  font: inherit; font-size: 0.9rem; background: #fff; width: 100%;
-}
-.new-user-fields { display: flex; flex-direction: column; gap: 6px; }
-.user-error { color: #be2020; font-size: 0.82rem; margin: 0; }
 
 /* ── Input mode buttons (speech / camera) ────────────────── */
 .input-mode-btns {
