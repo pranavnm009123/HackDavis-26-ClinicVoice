@@ -2544,6 +2544,155 @@ textarea:focus,
   background: var(--muted);
 }
 
+.staff-shell .staff-tab,
+.staff-shell .appt-page-tab,
+.staff-shell .view-toggle button,
+.staff-shell .add-slot-btn,
+.staff-shell .add-slot-inline,
+.staff-shell .appt-actions button {
+  background: var(--aggie-blue);
+  color: #ffffff;
+  border-color: var(--aggie-blue);
+}
+
+.staff-shell .staff-tab:hover,
+.staff-shell .staff-tab:focus-visible,
+.staff-shell .appt-page-tab:hover,
+.staff-shell .appt-page-tab:focus-visible,
+.staff-shell .view-toggle button:hover,
+.staff-shell .view-toggle button:focus-visible,
+.staff-shell .add-slot-btn:hover,
+.staff-shell .add-slot-btn:focus-visible,
+.staff-shell .appt-actions button:hover,
+.staff-shell .appt-actions button:focus-visible {
+  background: var(--aggie-gold-soft);
+  color: var(--aggie-blue);
+  border-color: var(--aggie-gold);
+  box-shadow: 0 0 0 3px rgba(245, 194, 66, 0.18);
+}
+
+.staff-shell .staff-tab.active,
+.staff-shell .category-tab.active,
+.staff-shell .appt-page-tab.active,
+.staff-shell .view-toggle button.is-active {
+  background: var(--aggie-gold);
+  color: var(--aggie-blue);
+  border-color: var(--aggie-gold);
+}
+
+.staff-shell .category-tab,
+.staff-shell .queue-controls .status-pill,
+.staff-shell .appt-count,
+.staff-shell .slot-available,
+.staff-shell .slot-chip.available {
+  background: var(--aggie-blue);
+  color: #ffffff;
+  border-color: var(--aggie-blue);
+}
+
+.staff-shell .category-tab:hover,
+.staff-shell .category-tab:focus-visible {
+  background: var(--aggie-gold-soft);
+  color: var(--aggie-blue);
+  border-color: var(--aggie-gold);
+}
+
+.staff-shell .category-tab.active .cat-count,
+.staff-shell .appt-page-tab.active .appt-count,
+.staff-shell .category-tab:hover .cat-count,
+.staff-shell .appt-page-tab:hover .appt-count {
+  background: rgba(13, 39, 78, 0.14);
+  color: var(--aggie-blue);
+}
+
+.staff-shell .doctor-card {
+  border-color: rgba(13, 39, 78, 0.14);
+  box-shadow: none;
+}
+
+.staff-shell .doctor-card:hover {
+  border-color: var(--aggie-blue);
+}
+
+.staff-shell .slot-chip.more,
+.staff-shell .slot-chip.none {
+  background: var(--aggie-gold-soft);
+  color: var(--aggie-blue);
+}
+
+.staff-shell .staff-tabs .staff-tab:not(.active),
+.staff-shell .appt-page-tabs .appt-page-tab:not(.active),
+.staff-shell .view-toggle button:not(.is-active) {
+  background: var(--aggie-blue) !important;
+  color: #ffffff !important;
+  border-color: var(--aggie-blue) !important;
+}
+
+.staff-shell .staff-tabs .staff-tab:not(.active):hover,
+.staff-shell .staff-tabs .staff-tab:not(.active):focus-visible,
+.staff-shell .appt-page-tabs .appt-page-tab:not(.active):hover,
+.staff-shell .appt-page-tabs .appt-page-tab:not(.active):focus-visible,
+.staff-shell .view-toggle button:not(.is-active):hover,
+.staff-shell .view-toggle button:not(.is-active):focus-visible {
+  background: var(--aggie-gold-soft) !important;
+  color: var(--aggie-blue) !important;
+  border-color: var(--aggie-gold) !important;
+}
+
+.staff-shell .staff-tabs .staff-tab.active,
+.staff-shell .appt-page-tabs .appt-page-tab.active,
+.staff-shell .view-toggle button.is-active {
+  background: var(--aggie-gold) !important;
+  color: var(--aggie-blue) !important;
+  border-color: var(--aggie-gold) !important;
+}
+
+.staff-shell .appt-page-tab:not(.active) .appt-count {
+  background: var(--aggie-gold-soft) !important;
+  color: var(--aggie-blue) !important;
+}
+
+.staff-shell .appt-page-tab.active .appt-count,
+.staff-shell .appt-page-tab:hover .appt-count {
+  background: rgba(13, 39, 78, 0.14) !important;
+  color: var(--aggie-blue) !important;
+}
+
+.patient-card.session-active .session-split-body {
+  justify-content: center;
+}
+
+.patient-card.session-active .session-left {
+  flex: 0 1 980px;
+  max-width: 980px;
+}
+
+.patient-card.session-active .session-left .conversation {
+  min-height: 260px;
+  max-height: clamp(300px, 42vh, 460px);
+}
+
+.patient-card.session-active .text-input-bar,
+.patient-card.session-active .patient-controls {
+  max-width: 980px;
+}
+
+.patient-card.session-active .camera-preview.is-visible {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 35;
+  display: block;
+  width: clamp(220px, 18vw, 320px);
+  max-height: 28vh;
+  margin: 0;
+  border: 3px solid #ffffff;
+  border-radius: 20px;
+  background: var(--aggie-blue);
+  box-shadow: 0 18px 46px rgba(13, 39, 78, 0.24);
+  object-fit: cover;
+}
+
 .input-mode-btn,
 .mode-option {
   border-radius: calc(var(--radius) + 4px);
@@ -2556,6 +2705,14 @@ textarea:focus,
 }
 
 @media (max-width: 520px) {
+  .patient-card.session-active .camera-preview.is-visible {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin: 12px auto 0;
+    box-shadow: none;
+  }
+
   .barrier-form-row,
   .status-actions,
   .care-circle-row {

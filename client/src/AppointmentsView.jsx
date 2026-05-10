@@ -23,14 +23,14 @@ const FACILITY_TYPE_LABELS = {
 const FACILITY_TYPE_COLORS = {
   hospital: '#be2020',
   free_clinic: '#0d274e',
-  urgent_care: '#b85412',
-  shelter: '#154872',
-  food_bank: '#b38b08',
+  urgent_care: '#0d274e',
+  shelter: '#0d274e',
+  food_bank: '#f5c242',
   pharmacy: '#0d274e',
 };
 
 function chipTextColor(levelOrType) {
-  return ['CRITICAL', 'HIGH', 'LOW', 'hospital', 'urgent_care'].includes(levelOrType) ? '#ffffff' : '#0d274e';
+  return ['CRITICAL', 'HIGH', 'LOW', 'hospital', 'free_clinic', 'urgent_care', 'shelter', 'pharmacy'].includes(levelOrType) ? '#ffffff' : '#0d274e';
 }
 
 const EMPTY_DOCTOR = { name: '', specialization: 'general_practice', phone: '', location: '', facility_id: '' };
