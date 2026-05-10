@@ -16,6 +16,8 @@ const intakeSchema = new mongoose.Schema(
     english_summary: { type: String, default: '' },
     recommended_next_step: { type: String, default: '' },
     accessibility: { type: String, default: '' },
+    accessibility_needs: { type: [String], default: [] },
+    support_contact: { type: mongoose.Schema.Types.Mixed, default: null },
     insurance: { type: String, default: '' },
     resource_matches: { type: [mongoose.Schema.Types.Mixed], default: [] },
     resources: { type: [mongoose.Schema.Types.Mixed], default: [] },

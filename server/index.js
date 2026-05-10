@@ -11,6 +11,7 @@ import * as apptStorage from './appointments.js';
 import * as doctorStorage from './doctors.js';
 import * as facilityStorage from './facilities.js';
 import * as userStorage from './users.js';
+import { listBarriers, createBarrier, getAccessScoreForFacility, getFacilitiesWithScores } from './supportServices.js';
 import { sendWelcomeEmail } from './email.js';
 
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
@@ -144,7 +145,7 @@ app.post('/doctors/:doctorId/slots', async (req, res) => {
 
 app.get('/facilities', async (_req, res) => {
   try {
-    res.json(await facilityStorage.getAllFacilities());
+    res.json(await getFacilitiesWithScores());
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
@@ -153,6 +154,28 @@ app.post('/facilities', async (req, res) => {
     const facility = await facilityStorage.saveFacility(req.body);
     broadcastStaff({ type: 'NEW_FACILITY', facility });
     res.status(201).json(facility);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/facilities/:id/access-score', async (req, res) => {
+  try {
+    const result = await getAccessScoreForFacility(req.params.id);
+    if (!result) return res.status(404).json({ error: 'Facility not found' });
+    res.json(result);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/barriers', async (req, res) => {
+  try {
+    res.json(await listBarriers(req.query.facility_id || null));
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.post('/barriers', async (req, res) => {
+  try {
+    const report = await createBarrier(req.body);
+    broadcastStaff({ type: 'BARRIER_REPORTED', report });
+    res.status(201).json(report);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 

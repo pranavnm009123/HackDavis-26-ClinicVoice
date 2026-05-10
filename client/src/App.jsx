@@ -1315,6 +1315,58 @@ dd {
   padding: 8px 12px; border: 1px solid var(--aggie-border); border-radius: 8px;
   font: inherit; font-size: 0.9rem; background: #fff;
 }
+
+/* ── Support Services ── */
+.access-checklist {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+}
+.access-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+}
+.access-badge.ok { background: #d6f0e4; color: #1a5c38; }
+.access-badge.warn { background: #fde8d0; color: #8a3a00; }
+
+.care-circle {
+  background: linear-gradient(135deg, #f0f7ff, #e8f4fd);
+  border: 1px solid rgba(13,39,78,0.14); border-radius: 12px;
+  padding: 14px 16px; margin: 12px 0;
+}
+.care-circle-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px;
+}
+.care-circle-rel { color: #6b7a74; font-size: 0.85rem; }
+.care-circle-phone { font-size: 0.82rem; color: #3a6080; margin-top: 2px; }
+.care-circle-notify {
+  background: #0d274e; color: #fff; padding: 6px 14px;
+  border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.care-circle-notify:hover { background: #154872; }
+
+.barrier-toggle {
+  background: none; color: #8a3a00; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; padding: 0; text-decoration: underline;
+  margin-top: 8px; display: inline-block;
+}
+.barrier-form {
+  background: #fdf6ed; border: 1px solid rgba(216,109,31,0.2);
+  border-radius: 12px; padding: 14px 16px; margin: 10px 0;
+}
+.barrier-form-row {
+  display: flex; gap: 8px; margin: 8px 0;
+}
+.barrier-form select, .barrier-form input {
+  flex: 1; padding: 7px 10px; border: 1px solid rgba(216,109,31,0.25);
+  border-radius: 8px; font: inherit; font-size: 0.85rem; background: #fff;
+}
+.barrier-form-actions { display: flex; gap: 8px; margin-top: 10px; }
+.barrier-submit {
+  background: #d86d1f; color: #fff; padding: 6px 16px;
+  border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.barrier-submit:hover { background: #b85a10; }
+.barrier-thanks { color: #3a7d5a; font-weight: 600; font-size: 0.85rem; }
 `;
 
 function App() {

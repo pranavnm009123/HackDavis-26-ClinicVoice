@@ -18,9 +18,25 @@ const facilitySchema = new mongoose.Schema(
     hours: { type: String, default: '' },
     lat: { type: Number, default: 0 },
     lng: { type: Number, default: 0 },
+    wheelchair_accessible: { type: Boolean, default: false },
+    languages_supported: { type: [String], default: ['English'] },
+    has_interpreter: { type: Boolean, default: false },
+    transport_nearby: { type: Boolean, default: false },
+    forms_assistance: { type: Boolean, default: false },
+    known_barriers: { type: [String], default: [] },
   },
   { collection: 'facilities', versionKey: false },
 );
+
+export function accessScore(facility) {
+  let score = 0;
+  if (facility.wheelchair_accessible) score++;
+  if (facility.languages_supported?.length > 1) score++;
+  if (facility.has_interpreter) score++;
+  if (facility.transport_nearby) score++;
+  if (facility.forms_assistance) score++;
+  return score;
+}
 
 export const Facility = mongoose.models.Facility || mongoose.model('Facility', facilitySchema);
 
@@ -52,6 +68,11 @@ const SEED_FACILITIES = [
     hours: 'ER: 24/7 · Clinics: Mon-Fri 8 AM-5 PM',
     lat: 38.5447,
     lng: -121.7536,
+    wheelchair_accessible: true,
+    languages_supported: ['English', 'Spanish'],
+    has_interpreter: true,
+    transport_nearby: true,
+    forms_assistance: true,
   },
   {
     name: 'Davis Community Clinic',
@@ -63,6 +84,11 @@ const SEED_FACILITIES = [
     hours: 'Mon-Fri 8 AM-5 PM',
     lat: 38.5474,
     lng: -121.756,
+    wheelchair_accessible: true,
+    languages_supported: ['English', 'Spanish'],
+    has_interpreter: true,
+    transport_nearby: true,
+    forms_assistance: true,
   },
   {
     name: 'CommuniCare Health Centers',
@@ -74,6 +100,11 @@ const SEED_FACILITIES = [
     hours: 'Mon-Fri 8 AM-6 PM',
     lat: 38.6743,
     lng: -121.7736,
+    wheelchair_accessible: true,
+    languages_supported: ['English', 'Spanish', 'Hmong', 'Vietnamese'],
+    has_interpreter: true,
+    transport_nearby: false,
+    forms_assistance: true,
   },
   {
     name: 'Woodland Memorial Hospital',
@@ -85,6 +116,11 @@ const SEED_FACILITIES = [
     hours: 'ER: 24/7 · Clinics: Mon-Fri 8 AM-5 PM',
     lat: 38.6793,
     lng: -121.7776,
+    wheelchair_accessible: true,
+    languages_supported: ['English', 'Spanish'],
+    has_interpreter: true,
+    transport_nearby: false,
+    forms_assistance: true,
   },
   {
     name: 'UC Davis Medical Center',
@@ -96,6 +132,11 @@ const SEED_FACILITIES = [
     hours: 'ER: 24/7',
     lat: 38.5495,
     lng: -121.4564,
+    wheelchair_accessible: true,
+    languages_supported: ['English', 'Spanish', 'Mandarin', 'Cantonese', 'Russian', 'Vietnamese', 'Hmong'],
+    has_interpreter: true,
+    transport_nearby: true,
+    forms_assistance: true,
   },
   {
     name: 'Fourth and Hope',
@@ -107,6 +148,11 @@ const SEED_FACILITIES = [
     hours: 'Daily intake by phone',
     lat: 38.668,
     lng: -121.7506,
+    wheelchair_accessible: false,
+    languages_supported: ['English', 'Spanish'],
+    has_interpreter: false,
+    transport_nearby: false,
+    forms_assistance: true,
   },
   {
     name: 'Yolo Food Bank',
@@ -118,6 +164,11 @@ const SEED_FACILITIES = [
     hours: 'Distribution times vary — call ahead',
     lat: 38.6678,
     lng: -121.7756,
+    wheelchair_accessible: true,
+    languages_supported: ['English', 'Spanish'],
+    has_interpreter: false,
+    transport_nearby: false,
+    forms_assistance: false,
   },
 ];
 

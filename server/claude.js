@@ -17,6 +17,8 @@ const CARD_SYSTEM_PROMPT = `You are a case intake processor for VoiceBridge, a m
   "visit": { "reason": "string", "duration": "string", "severity": 0, "notes": "string" },
   "urgency": { "level": "string", "suggested_next_step": "string", "reasoning": "string" },
   "accessibility": "string",
+  "accessibility_needs": ["string"],
+  "support_contact": { "name": "string", "relationship": "string", "phone": "string" },
   "insurance": "string",
   "structured_fields": {},
   "transcript_summary": "string",
@@ -24,7 +26,10 @@ const CARD_SYSTEM_PROMPT = `You are a case intake processor for VoiceBridge, a m
   "recommended_next_step": "string",
   "resource_matches": [],
   "red_flags": []
-}`;
+}
+
+For accessibility_needs: extract a JSON array of specific accessibility requirements mentioned (e.g. ["wheelchair access", "Spanish interpreter", "transportation help"]). Use an empty array if none.
+For support_contact: extract name, relationship, and phone from structured_fields if a support/emergency contact was mentioned. Use null if none provided.`;
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
