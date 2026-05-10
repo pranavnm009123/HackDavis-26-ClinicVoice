@@ -82,9 +82,12 @@ export default function StaffView() {
   return (
     <main className="staff-shell">
       <header className="staff-header">
-        <div>
-          <p className="eyebrow">Staff dashboard</p>
+        <div className="brand-lockup">
+          <p className="eyebrow">Healthcare AI intake · Staff</p>
           <h1>VoiceBridge intake queue</h1>
+          <p className="brand-tagline">
+            Triage live voice intakes: urgency flags, structured fields, and status updates in one queue.
+          </p>
         </div>
         <div className={connected ? 'connection is-live' : 'connection'}>
           <span />

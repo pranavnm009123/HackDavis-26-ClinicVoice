@@ -357,9 +357,13 @@ export default function PatientView() {
     <main className="patient-shell">
       <section className="patient-card">
         <header className="patient-header">
-          <div>
-            <p className="eyebrow">Clinics · shelters · mutual aid</p>
+          <div className="brand-lockup">
+            <p className="eyebrow">Healthcare AI intake</p>
             <h1>VoiceBridge</h1>
+            <p className="brand-tagline">
+              Multilingual voice intake for clinics, shelters, and community care — speak naturally; staff get a structured
+              record.
+            </p>
           </div>
           <div className={connected ? 'connection is-live' : 'connection'}>
             <span />

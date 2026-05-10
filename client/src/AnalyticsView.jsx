@@ -146,9 +146,10 @@ export default function AnalyticsView() {
   return (
     <main className="analytics-shell">
       <header className="staff-header">
-        <div>
-          <p className="eyebrow">Staff dashboard</p>
-          <h1>Intake insights</h1>
+        <div className="brand-lockup">
+          <p className="eyebrow">Healthcare AI intake · Analytics</p>
+          <h1>VoiceBridge insights</h1>
+          <p className="brand-tagline">Intake volume, urgency mix, modes, and languages over recent activity.</p>
         </div>
         <div className="connection is-live"><span />Live</div>
       </header>
@@ -219,7 +220,7 @@ export default function AnalyticsView() {
                     <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
                     <Tooltip />
                     <Legend />
-                    <Line dataKey="intakes" dot={false} name="Intakes" stroke="#17382d" strokeWidth={2.5} type="monotone" />
+                    <Line dataKey="intakes" dot={false} name="Intakes" stroke="#0d274e" strokeWidth={2.5} type="monotone" />
                     <Line dataKey="appointments" dot={false} name="Appointments" stroke="#d86d1f" strokeWidth={2} type="monotone" strokeDasharray="4 2" />
                   </LineChart>
                 </ResponsiveContainer>
@@ -233,7 +234,7 @@ export default function AnalyticsView() {
                   <PieChart>
                     <Pie cx="50%" cy="50%" data={urgencyData} dataKey="value" innerRadius={52} nameKey="name" outerRadius={88}>
                       {urgencyData.map((entry) => (
-                        <Cell fill={URGENCY_COLORS[entry.name] ?? '#9aa9a1'} key={entry.name} />
+                        <Cell fill={URGENCY_COLORS[entry.name] ?? '#8fa4b8'} key={entry.name} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -312,7 +313,7 @@ export default function AnalyticsView() {
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#17382d" name="Intakes" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="count" fill="#0d274e" name="Intakes" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -326,7 +327,7 @@ export default function AnalyticsView() {
                     <XAxis allowDecimals={false} tick={{ fontSize: 11 }} type="number" />
                     <YAxis dataKey="name" tick={{ fontSize: 11 }} type="category" width={72} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#5f776c" name="Intakes" radius={[0, 6, 6, 0]} />
+                    <Bar dataKey="count" fill="#f5c242" name="Intakes" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
