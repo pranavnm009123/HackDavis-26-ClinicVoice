@@ -196,6 +196,28 @@ This section covers housing needs that are NOT emergencies: students looking for
 
 ---
 
+## Grocery stores and retail food (mode: `food_aid` — buying food nearby)
+
+Use these when a patient asks **where to buy** food, groceries, or household supplies — not for free food assistance. Match on city/zip and mention hours.
+
+### Davis, CA grocery stores
+
+| Name | Type | Who it fits | Phone | Address | Hours |
+|------|------|-------------|-------|---------|-------|
+| **Trader Joe's** | `grocery_store` | Popular chain; good prices, variety | **(530) 757-2693** | 885 Russell Blvd, Davis, CA | Daily 8 AM–9 PM |
+| **Nugget Markets (Covell)** | `grocery_store` | Full-service, upscale; near north Davis | **(530) 750-3800** | 1414 E Covell Blvd, Davis, CA | Daily 6 AM–11 PM |
+| **Nugget Markets (Mace)** | `grocery_store` | Full-service; east Davis / Mace area | **(530) 753-6690** | 409 Mace Blvd, Davis, CA | Daily 6 AM–10 PM |
+| **Safeway (Covell)** | `grocery_store` | Large chain; late-night hours | **(530) 757-4540** | 1451 W Covell Blvd, Davis, CA | Daily 5 AM–2 AM |
+| **Safeway (Cowell)** | `grocery_store` | Large chain; east Davis | **(530) 792-8500** | 2121 Cowell Blvd, Davis, CA | Daily 5 AM–2 AM |
+| **Save Mart** | `grocery_store` | Mid-range grocery, Anderson Rd area | **(530) 758-0580** | 1900 Anderson Rd, Davis, CA | Daily 6 AM–11 PM |
+| **Grocery Outlet** | `grocery_store` | Discount bargain grocery; budget option | **(530) 757-4430** | 1800 E 8th St, Davis, CA | Daily 8 AM–9 PM |
+| **Target (grocery section)** | `grocery_store` | Grocery + general merchandise | **(530) 761-0126** | 4601 2nd St, Davis, CA | Daily 8 AM–10 PM |
+| **Davis Food Co-op** | `grocery_store` | Locally owned co-op; organic, bulk foods | **(530) 758-2667** | 620 G St, Davis, CA | Daily 7 AM–10 PM |
+
+**Key distinction from food banks**: these are retail stores where patients **pay** for food. For **free** food assistance, use the Food banks and mutual aid section above. When a patient asks "where can I buy X?" or "nearest store?" → match grocery_store. When a patient says "I have no food" or "I can't afford food" → match food or food_bank.
+
+---
+
 ## Language, literacy and immigrant access
 
 - **Phone and video interpretation** is standard at many clinics — next step: *Ask scheduler for interpreter in [language].*

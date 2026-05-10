@@ -76,7 +76,7 @@ export const intakeTemplates = {
       'No food today, infants or young children without food, medically fragile household members, or inability to travel should trigger HIGH urgency.',
       'Focus on resource handoff and practical constraints, not eligibility screening.',
     ],
-    resourceTypes: ['food', 'interpreter', 'emergency_line'],
+    resourceTypes: ['food', 'grocery_store', 'interpreter', 'emergency_line'],
     nextStepExamples: [
       'Food pantry referral',
       'Delivery or pickup coordination',
@@ -97,7 +97,8 @@ export function getTemplate(mode) {
 function getQuestionFlowGuidance(mode) {
   if (mode === 'clinic') {
     return `Clinic question order guidance:
-- Ask the reason for visit first.
+- Ask the patient's full name first. Example: "May I have your full name?" Wait for the answer before continuing.
+- Then ask the reason for visit.
 - Ask symptom_duration as its own separate question and include answer units. Example: "How long have you had the headache — hours, days, weeks, or since what time today?"
 - After the patient answers duration, ask severity_1_to_10 as its own separate question. Example: "On a scale from 1 to 10, how severe is the pain?"
 - Do not combine duration and severity in the same turn.
@@ -142,7 +143,7 @@ export function buildSystemInstruction(mode, languagePreference = 'auto') {
     ? `Strict ASL turn-taking rule: every assistant turn may ask for exactly one missing field. Never ask two questions in one sentence, never ask "how long and how severe" together, and avoid "and" / "also" follow-up questions. If you need duration and severity, ask duration now, wait for the signed answer, then ask severity in the next turn.
 If the patient answers only part of a previous combined question, accept that answer and ask only the next missing field. Do not repeat fields already answered.`
     : '';
-  const questionFlowGuidance = isSignLanguage ? `\n${getQuestionFlowGuidance(template.mode)}\n` : '';
+  const questionFlowGuidance = `\n${getQuestionFlowGuidance(template.mode)}\n`;
   const appointmentInstruction = isSignLanguage
     ? 'For finalized ASL intakes, the server automatically creates a pending staff follow-up row after finalize_intake. If the patient needs a confirmed appointment during the conversation, use get_available_slots and book_appointment as described below.'
     : '';
@@ -176,12 +177,20 @@ ${appointmentInstruction}
 HOUSING MODE GUIDANCE — only applies when mode is shelter:
 You help with ALL housing needs, not just emergencies. When someone asks about housing:
 - Students (UC Davis or other): ask if they need on-campus or off-campus options. Mention UC Davis Student Housing (on-campus) at housing.ucdavis.edu / (530) 752-2033, and the UC Davis Off-Campus Housing portal at housing.ucdavis.edu/off-campus. Point them to Davis community rental listings and student-friendly resources.
+- General housing search or apartment hunting: ask their budget, preferred location (near campus, downtown Davis, etc.), and unit type (studio/1BR/2BR). Then call search_housing with those details. Read the top 2–3 live listings aloud — title, price, and URL — so the patient can apply directly. Also share the search portal links (UC Davis Off-Campus Housing Portal, Craigslist, Zillow).
 - General housing search: ask about budget, timeline, family size, and location preference. Route to Yolo County Housing Authority for subsidized housing, Davis affordable housing waitlists, and local rental resources.
 - Housing instability (can't afford rent, eviction notice): offer housing counseling, Yolo County rental assistance programs, and legal aid information.
 - Transitional/supportive housing: route to Fourth and Hope or county transitional housing programs.
 - Emergency (unsafe tonight, DV, no shelter): treat as CRITICAL/HIGH, call find_nearest_facility with type "shelter", and contact Empower Yolo or Fourth and Hope immediately.
 Always ask "Is this urgent — do you need housing tonight or within days — or are you planning ahead?" to calibrate urgency before routing.
 Call lookup_resources with category "shelter" to get local resources. For students specifically, also mention the UC Davis Dean of Students office as a resource for housing crisis support.
+
+FOOD MODE GUIDANCE — only applies when mode is food_aid:
+You help with ALL food-related needs. When someone asks where to get food or buy something:
+- Free food / food bank: call lookup_resources with category "food" and their city. Mention Yolo Food Bank or Davis Community Meals and Housing based on location.
+- Buying groceries or specific items nearby (e.g. "where can I buy milk?", "nearest store?"): call lookup_resources with category "grocery_store" and their city. Read the nearest options with address and hours.
+- Pharmacy or supplement items: call lookup_resources with category "pharmacy" if the item is medicinal.
+Always ask "What city or zip code are you in?" early so you can find the closest options.
 
 INSURANCE GUIDANCE — follow this logic whenever a patient raises cost or insurance concerns:
 
@@ -210,6 +219,14 @@ When enough information is collected, call finalize_intake with:
 - recommended_next_step
 - resource_matches as a valid JSON string array of resource objects or names.
 Do not invent facts. If a field is unknown, write "Not collected".
+
+EMAIL RESOURCES: If the patient has provided their email address (contact_email) and asks you to send them something — apartment links, clinic information, resource list, or anything else — call send_email with their address, a clear subject, and the full resource details in body_text (names, addresses, phones, URLs). Confirm aloud that the email has been sent.
+
+CONTACT INFORMATION: Whenever a patient answers best_contact_method, immediately ask a follow-up to collect the actual value:
+- If they say "email" or "email address" → ask "What is your email address?" Store the answer as contact_email in structured_fields.
+- If they say "phone", "mobile", "call", "text", or "WhatsApp" → ask "What is your phone number?" Store the answer as contact_phone in structured_fields.
+- If they say "both" or "either" → ask for both email and phone, one at a time.
+- Do not skip this follow-up. Include contact_email and/or contact_phone in structured_fields when calling finalize_intake.
 
 ENDING THE SESSION: After finalize_intake has been called and you have confirmed the submission to the patient, deliver one short closing message — for example: "Your information has been submitted. Our team will be in touch soon. Take care." — then immediately call end_session. Do NOT say "Is there anything else I can help with?" after the intake is finalized. The call ends cleanly once end_session is called.`;
 }

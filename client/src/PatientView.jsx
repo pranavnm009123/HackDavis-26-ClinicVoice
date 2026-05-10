@@ -11,8 +11,30 @@ const modes = [
 const TRANSCRIPT_MERGE_WINDOW_MS = 2200;
 const ASL_AUTO_INTERPRET_DELAY_MS = 7000;
 
+// Regex captures http(s) URLs and bare domains ending in common TLDs
+const LINK_RE = /(https?:\/\/[^\s]+|\b[a-z0-9.-]+\.(?:edu|org|gov|com|net|io)(?:\/[^\s]*)?)/gi;
+
+function renderWithLinks(text) {
+  const parts = text.split(LINK_RE);
+  if (parts.length <= 1) return text;
+  return parts.map((part, i) => {
+    if (i % 2 === 0) return part || null;
+    // Strip trailing punctuation that was not part of the URL
+    const clean = part.replace(/[.,!?;:)"']+$/, '');
+    const trailing = part.slice(clean.length);
+    const href = /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
+    return (
+      <span key={i}>
+        <a className="chat-link" href={href} rel="noopener noreferrer" target="_blank">{clean}</a>
+        {trailing}
+      </span>
+    );
+  });
+}
+
 function detectLanguageBadge(text) {
   const normalized = text.toLowerCase();
+  if (/[ऀ-ॿ]/.test(text)) return 'HI';
   if (/[¿¡ñáéíóú]/.test(normalized) || /\b(hola|gracias|dolor|tiene|puede)\b/.test(normalized)) return 'ES';
   if (/\b(bonjour|merci|douleur|vous)\b/.test(normalized)) return 'FR';
   if (/\b(你好|谢谢|疼|痛)\b/.test(normalized)) return 'ZH';
@@ -48,6 +70,8 @@ export default function PatientView() {
   const [sessionEnded, setSessionEnded] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
   const [signedResponsePending, setSignedResponsePending] = useState(false);
+  const [showEnglish, setShowEnglish] = useState(false);
+  const [translations, setTranslations] = useState({});
 
   const [isReturning, setIsReturning] = useState(false);
   const [userId, setUserId] = useState('');
@@ -262,6 +286,29 @@ export default function PatientView() {
     window.location.reload();
   }
 
+  async function translateMessage(id, text) {
+    if (translations[id]) return;
+    try {
+      const res = await fetch(`http://${window.location.hostname}:3001/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (data.translated) {
+        setTranslations((prev) => ({ ...prev, [id]: data.translated }));
+      }
+    } catch { /* translation fetch failed silently */ }
+  }
+
+  function toggleEnglish() {
+    const next = !showEnglish;
+    setShowEnglish(next);
+    if (next) {
+      conversation.forEach((msg) => translateMessage(msg.id, msg.text));
+    }
+  }
+
   // Auto-redirect to fresh start when session closes naturally
   useEffect(() => {
     if (!sessionEnded) return;
@@ -328,6 +375,16 @@ export default function PatientView() {
     sessionStarted,
     signedResponsePending,
   ]);
+
+  useEffect(() => {
+    if (!showEnglish || conversation.length === 0) return;
+    const last = conversation[conversation.length - 1];
+    if (last && !translations[last.id]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      translateMessage(last.id, last.text);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation, showEnglish]);
 
   useEffect(
     () => () => {
@@ -482,6 +539,18 @@ export default function PatientView() {
           </section>
         )}
 
+        {conversation.length > 0 && (
+          <div className="transcript-toolbar">
+            <button
+              className={showEnglish ? 'translate-toggle is-active' : 'translate-toggle'}
+              type="button"
+              onClick={toggleEnglish}
+            >
+              {showEnglish ? 'EN' : 'EN'} {showEnglish ? '✓' : '↔'} Translate
+            </button>
+          </div>
+        )}
+
         <div className="conversation" aria-live="polite">
           {sessionLoading ? (
             <div className="welcome-bubble">
@@ -504,7 +573,12 @@ export default function PatientView() {
                 className={message.role === 'user' ? 'bubble patient-bubble' : 'bubble ai-bubble'}
                 key={message.id}
               >
-                {message.text}
+                {showEnglish && translations[message.id]
+                  ? renderWithLinks(translations[message.id])
+                  : renderWithLinks(message.text)}
+                {showEnglish && !translations[message.id] && (
+                  <span className="translating-indicator">translating…</span>
+                )}
               </div>
             ))
           )}

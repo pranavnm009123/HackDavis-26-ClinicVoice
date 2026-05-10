@@ -8,7 +8,8 @@
     "start": "node index.js",
     "test:storage": "node storage.js",
     "test:claude": "node claude.js",
-    "test:functions": "node functions.js"
+    "test:functions": "node functions.js",
+    "backboard:sync": "node scripts/sync-backboard-rag.mjs --force"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

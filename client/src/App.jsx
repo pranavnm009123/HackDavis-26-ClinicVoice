@@ -353,6 +353,38 @@ h2 {
   color: var(--aggie-blue);
 }
 
+.transcript-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2px 6px;
+}
+
+.translate-toggle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--aggie-border);
+  background: transparent;
+  color: var(--aggie-blue-mid);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.translate-toggle.is-active {
+  background: var(--aggie-blue);
+  color: #fff;
+  border-color: var(--aggie-blue);
+}
+
+.translating-indicator {
+  display: block;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .conversation {
   display: flex;
   min-height: 360px;
@@ -905,7 +937,6 @@ dd {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
-
 .input-mode-btn {
   display: flex;
   flex-direction: column;
@@ -1002,6 +1033,18 @@ dd {
   font-size: 0.92rem;
   margin-top: 8px;
 }
+
+/* ── Clickable links inside chat bubbles ─────────────────── */
+.chat-link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+
+.ai-bubble .chat-link { color: #0d5e99; }
+.patient-bubble .chat-link { color: #d4f0ff; }
 
 /* ── Analytics page ──────────────────────────────────────── */
 .analytics-shell {

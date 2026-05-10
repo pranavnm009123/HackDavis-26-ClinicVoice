@@ -4,7 +4,7 @@ import * as defaultStorage from './storage.js';
 import * as appointmentsStorage from './appointments.js';
 import * as doctorStorage from './doctors.js';
 import * as facilityStorage from './facilities.js';
-import { sendAppointmentConfirmation } from './email.js';
+import { sendAppointmentConfirmation, sendIntakeConfirmation, sendResourceEmail } from './email.js';
 import { matchResourcesWithBackboard, enrichIntakeWithBackboard, loadCuratedResourceGuide } from './backboardMatch.js';
 
 function parseJsonish(value, fallback) {
@@ -146,6 +146,17 @@ export async function finalize_intake(args, broadcast, storage = defaultStorage,
 
   broadcast({ type: 'NEW_INTAKE', card: storedCard });
 
+  const patientEmail = structuredFields.contact_email || userContext?.email;
+  if (patientEmail) {
+    sendIntakeConfirmation({
+      to: patientEmail,
+      name: structuredFields.full_name || card?.patient?.name || userContext?.name || '',
+      card: storedCard,
+      mode,
+      structuredFields,
+    }).catch((e) => console.warn('[Email] Intake confirmation failed:', e.message));
+  }
+
   if (process.env.BACKBOARD_API_KEY) {
     enrichIntakeWithBackboard(storedCard, args, broadcast, storage).catch((e) =>
       console.warn('[Backboard] resource enrichment failed:', e.message),
@@ -203,6 +214,12 @@ const FALLBACK_RESOURCES = {
     { name: 'Yolo County Housing Authority (Section 8)', address: '147 W Main St, Woodland, CA', phone: '(530) 662-5428', hours: 'Mon-Fri 8 AM-5 PM', type: 'housing' },
     { name: 'Legal Services of Northern California — Tenant Rights', address: '515 12th St, Sacramento, CA', phone: '(530) 662-1065', hours: 'Mon-Fri 9 AM-5 PM', type: 'housing' },
   ],
+  grocery_store: [
+    { name: 'Nugget Markets', address: '1414 E Covell Blvd, Davis, CA', phone: '(530) 753-7000', hours: 'Daily 6 AM–11 PM', type: 'grocery_store' },
+    { name: 'Safeway', address: '1431 W Covell Blvd, Davis, CA', phone: '(530) 758-6440', hours: 'Daily 24 hours', type: 'grocery_store' },
+    { name: 'Target', address: '3900 Chiles Rd, Davis, CA', phone: '(530) 756-5900', hours: 'Daily 8 AM–10 PM', type: 'grocery_store' },
+    { name: 'El Super (Woodland)', address: '180 W Main St, Woodland, CA', phone: '(530) 668-1600', hours: 'Daily 7 AM–10 PM', type: 'grocery_store' },
+  ],
   insurance_help: [
     { name: 'Medi-Cal Enrollment (Yolo County HHS)', address: '137 N Cottonwood St, Woodland, CA', phone: '(530) 661-2750', hours: 'Mon-Fri 8 AM-5 PM', type: 'insurance_help' },
     { name: 'Covered California', address: 'Online or in-person at CommuniCare', phone: '1-800-300-1506', hours: 'Mon-Fri 8 AM-6 PM', type: 'insurance_help' },
@@ -212,8 +229,116 @@ const FALLBACK_RESOURCES = {
 
 const CATEGORY_TO_MODE = {
   clinic: 'clinic', shelter: 'shelter', housing: 'shelter', food: 'food_aid', food_aid: 'food_aid',
-  pharmacy: 'clinic', interpreter: 'clinic', emergency_line: 'clinic', insurance_help: 'clinic',
+  grocery_store: 'food_aid', pharmacy: 'clinic', interpreter: 'clinic', emergency_line: 'clinic', insurance_help: 'clinic',
 };
+
+const HOUSING_STATIC = [
+  {
+    name: 'UC Davis Off-Campus Housing Portal',
+    type: 'search_portal',
+    url: 'https://housing.ucdavis.edu/off-campus',
+    phone: '(530) 752-2033',
+    description: 'Official UC Davis portal — rentals, sublets, and roommates near campus posted by local landlords. Filter by price, distance, and unit type.',
+    price_range: 'Varies',
+    distance: 'Online portal (all Davis distances)',
+  },
+  {
+    name: 'West Village (UC Davis)',
+    type: 'apartment_complex',
+    url: 'https://westvillage.ucdavis.edu',
+    phone: '(530) 756-7070',
+    description: 'University-managed community on the west edge of campus; studios to 4BR townhomes. Designed for students and UC Davis affiliates.',
+    price_range: '$1,500–$3,200/mo',
+    distance: 'Adjacent to campus (west side)',
+  },
+  {
+    name: 'Craigslist Davis Apartments',
+    type: 'search_portal',
+    url: 'https://sacramento.craigslist.org/search/apa?postal=95616&search_distance=3',
+    description: 'Live daily listings within 3 miles of Davis. Filter by price and bedrooms on the page.',
+    price_range: 'Varies — filter on site',
+    distance: 'Within 3 miles of 95616',
+  },
+  {
+    name: 'Zillow Rentals — Davis, CA',
+    type: 'search_portal',
+    url: 'https://www.zillow.com/davis-ca/rentals/',
+    description: 'Current rental listings in Davis with photos, floor plans, and online applications.',
+    price_range: 'Varies',
+    distance: 'Davis and surrounding area',
+  },
+];
+
+async function fetchCraigslistListings(budgetMax, unitType) {
+  let url = 'https://sacramento.craigslist.org/search/apa?format=rss&postal=95616&search_distance=3&sort=date';
+  if (budgetMax) url += `&max_price=${budgetMax}`;
+  if (unitType && unitType !== 'any') {
+    const brMap = { studio: '0', '1br': '1', '2br': '2', '3br': '3' };
+    const br = brMap[unitType];
+    if (br !== undefined) {
+      url += `&min_bedrooms=${br}&max_bedrooms=${br}`;
+    }
+  }
+
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VoiceBridge/1.0)' },
+    signal: AbortSignal.timeout(6000),
+  });
+
+  if (!response.ok) throw new Error(`Craigslist returned ${response.status}`);
+
+  const text = await response.text();
+  const items = [];
+  const itemRe = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+
+  while ((m = itemRe.exec(text)) !== null && items.length < 5) {
+    const chunk = m[1];
+    const title = (chunk.match(/<title><!\[CDATA\[(.*?)\]\]>/)?.[1] ?? chunk.match(/<title>(.*?)<\/title>/)?.[1] ?? '').trim();
+    const rawLink = chunk.match(/<link>(.*?)<\/link>/)?.[1]?.trim() ?? '';
+    // Craigslist sometimes puts the URL after <link/> as a text node
+    const link = rawLink || chunk.match(/<guid[^>]*>(https?:\/\/[^<]+)<\/guid>/)?.[1] ?? '';
+    const price = title.match(/\$[\d,]+/)?.[0] ?? chunk.match(/\$[\d,]+/)?.[0] ?? 'contact for price';
+    const decoded = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'");
+    if (decoded && link) items.push({ title: decoded, price, url: link, source: 'Craigslist' });
+  }
+
+  return items;
+}
+
+export async function search_housing(args) {
+  const { location_preference, budget_max, unit_type } = args;
+
+  let liveListings = [];
+  try {
+    liveListings = await fetchCraigslistListings(budget_max, unit_type);
+  } catch (e) {
+    console.warn('[Housing] Craigslist scrape failed:', e.message);
+  }
+
+  const searchLinks = HOUSING_STATIC.map((r) => {
+    if (budget_max && r.type === 'search_portal' && r.url.includes('craigslist')) {
+      return { ...r, url: r.url + `&max_price=${budget_max}` };
+    }
+    if (budget_max && r.url.includes('zillow')) {
+      return { ...r, url: r.url + `?price=0-${budget_max}` };
+    }
+    return r;
+  });
+
+  return {
+    live_listings: liveListings,
+    search_links: searchLinks,
+    filters_applied: {
+      location: location_preference,
+      budget_max: budget_max ?? null,
+      unit_type: unit_type ?? 'any',
+    },
+    note: liveListings.length > 0
+      ? `Found ${liveListings.length} current listings near Davis. Availability and prices change daily — confirm with landlords.`
+      : 'Live listings unavailable right now. Share the search links below with the patient so they can browse current options.',
+  };
+}
 
 export async function lookup_resources(args) {
   if (process.env.BACKBOARD_API_KEY) {
@@ -369,10 +494,19 @@ export async function book_appointment(args, broadcast, userContext = null) {
   };
 }
 
+export async function send_email(args) {
+  const { to, subject, body_text } = args;
+  if (!to || !to.includes('@')) return { success: false, error: 'Invalid email address.' };
+  await sendResourceEmail({ to, subject, bodyText: body_text });
+  return { success: true, message: `Email sent to ${to}.` };
+}
+
 export const handlers = {
   tag_urgency,
   finalize_intake,
   lookup_resources,
+  search_housing,
+  send_email,
   get_available_slots,
   find_nearest_facility,
   book_appointment,

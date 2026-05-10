@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import dotenv from 'dotenv';
 import { WebSocketServer, WebSocket } from 'ws';
+import Anthropic from '@anthropic-ai/sdk';
 import { createGeminiSession } from './geminiSession.js';
 import { isValidMode } from './intakeTemplates.js';
 import * as storage from './storage.js';
@@ -179,6 +180,22 @@ app.get('/users/:userId', async (req, res) => {
     res.json({ user });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/translate', async (req, res) => {
+  const { text } = req.body;
+  if (!text?.trim()) return res.json({ translated: text });
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: `Translate to English. Output only the translation, nothing else:\n\n${text}` }],
+    });
+    res.json({ translated: response.content[0].text.trim() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
