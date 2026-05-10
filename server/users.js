@@ -25,7 +25,7 @@ function toClient(doc) {
 
 async function nextUserId() {
   const count = await Patient.countDocuments();
-  return `VB-${String(count + 1).padStart(4, '0')}`;
+  return `CC-${String(count + 1).padStart(4, '0')}`;
 }
 
 export async function createUser({ email, phone, name, language }) {

@@ -110,7 +110,7 @@ async function createFollowUpAppointment({
       card?.visit?.reason ||
       args.english_summary ||
       args.transcript ||
-      'Follow-up from VoiceBridge intake',
+      'Follow-up from CowmunityCare intake',
     source: 'bot',
     status: 'pending',
     notes: card?.recommended_next_step || args.recommended_next_step || '',
@@ -433,7 +433,7 @@ async function fetchCraigslistListings(budgetMax, unitType) {
   }
 
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VoiceBridge/1.0)' },
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CowmunityCare/1.0)' },
     signal: AbortSignal.timeout(6000),
   });
 

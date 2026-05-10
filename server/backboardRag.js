@@ -52,7 +52,7 @@ function guideDocMatches(doc) {
 }
 
 /**
- * Ensure the VoiceBridge resource guide is uploaded and indexed on the assistant.
+ * Ensure the CowmunityCare resource guide is uploaded and indexed on the assistant.
  * Skips upload if an indexed copy already exists (unless force).
  *
  * @param {string} assistantId

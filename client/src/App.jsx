@@ -319,6 +319,47 @@ h2 {
   box-shadow: inset 0 0 0 2px rgba(0, 40, 85, 0.2);
 }
 
+.user-id-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--aggie-border);
+  border-radius: 18px;
+  background: rgba(232, 238, 245, 0.65);
+}
+
+.returning-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--aggie-blue);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.user-id-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--aggie-border);
+  border-radius: 12px;
+  background: #fffefb;
+  color: var(--aggie-blue);
+  font: inherit;
+}
+
+.contact-note,
+.user-error {
+  margin: 0;
+  color: var(--aggie-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.user-error {
+  color: #be2020;
+}
+
 .language-select {
   display: grid;
   gap: 8px;
@@ -441,13 +482,19 @@ h2 {
 .conversation {
   display: flex;
   min-height: 300px;
-  max-height: min(52vh, 420px);
+  max-height: min(48vh, 420px);
   flex-direction: column;
   gap: 14px;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 20px 34px;
   border-radius: 28px;
   background: linear-gradient(180deg, #fffefb, var(--aggie-blue-soft));
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+.conversation-end {
+  flex: 0 0 1px;
 }
 
 .patient-card.session-setup .conversation {
@@ -1243,8 +1290,8 @@ dd {
   }
 
   .patient-card.session-active .conversation {
-    min-height: 460px;
-    max-height: 560px;
+    min-height: clamp(320px, 42vh, 460px);
+    max-height: min(50vh, 560px);
   }
 
   .patient-card.session-active .patient-controls {

@@ -214,7 +214,7 @@ export default function AnalyticsView() {
     <main className="analytics-shell" id="main-content">
       <header className="staff-header">
         <div className="brand-lockup">
-          <p className="eyebrow">VoiceBridge · Analytics</p>
+          <p className="eyebrow">CowmunityCare · Analytics</p>
           <h1>Insights</h1>
           <p className="brand-tagline">Intake volume, urgency mix, modes, and languages over recent activity.</p>
         </div>

@@ -84,14 +84,13 @@ export default function PatientView() {
 
   const [isReturning, setIsReturning] = useState(false);
   const [userId, setUserId] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [userName, setUserName] = useState('');
   const [userError, setUserError] = useState('');
   const [sessionUser, setSessionUser] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const conversationRef = useRef(null);
+  const conversationEndRef = useRef(null);
   const cameraStreamRef = useRef(null);
   const cameraTimerRef = useRef(null);
   const pendingAutoStartRef = useRef(null);
@@ -230,45 +229,14 @@ export default function PatientView() {
     setUserError('');
     let user = sessionUser;
 
-    if (!user) {
-      if (isReturning) {
-        if (!userId.trim()) { setUserError('Enter your VoiceBridge ID.'); return; }
-        try {
-          const res = await fetch(`http://${window.location.hostname}:3001/users/${userId.trim().toUpperCase()}`);
-          if (!res.ok) { setUserError('ID not found. Check your ID or register as a new patient.'); return; }
-          const data = await res.json();
-          user = data.user;
-        } catch { setUserError('Could not reach server.'); return; }
-      } else {
-        if (!userName.trim()) { setUserError('Enter your name before starting.'); return; }
-        if (!email.trim()) { setUserError('Enter your email so we can send your summary.'); return; }
-        if (!email.includes('@')) { setUserError('Enter a valid email address.'); return; }
-        if (!phone.trim()) { setUserError('Enter your phone number before starting.'); return; }
-
-        try {
-          const res = await fetch(`http://${window.location.hostname}:3001/users`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim(), phone: phone.trim(), name: userName.trim(), language: langPref }),
-          });
-          const data = await res.json();
-          user = data.user || {
-            email: email.trim(),
-            phone: phone.trim(),
-            name: userName.trim(),
-            language: langPref,
-          };
-          if (data.isNew) setSessionStatus(`Welcome! Your VoiceBridge ID is ${user.userId}`);
-        } catch {
-          user = {
-            email: email.trim(),
-            phone: phone.trim(),
-            name: userName.trim(),
-            language: langPref,
-          };
-          setSessionStatus('We saved your contact info for this session.');
-        }
-      }
+    if (!user && isReturning) {
+      if (!userId.trim()) { setUserError('Enter your CowmunityCare ID.'); return; }
+      try {
+        const res = await fetch(`http://${window.location.hostname}:3001/users/${userId.trim().toUpperCase()}`);
+        if (!res.ok) { setUserError('ID not found. Uncheck returning patient to start a new intake.'); return; }
+        const data = await res.json();
+        user = data.user;
+      } catch { setUserError('Could not reach server.'); return; }
     }
 
     setSessionUser(user);
@@ -277,7 +245,7 @@ export default function PatientView() {
     setSignedResponsePending(false);
     signedResponseCountRef.current = 0;
     window.clearTimeout(aslAutoTimerRef.current);
-    if (!sessionStatus.startsWith('Welcome')) setSessionStatus('Connecting to VoiceBridge...');
+    if (!sessionStatus.startsWith('Welcome')) setSessionStatus('Connecting to CowmunityCare...');
     send({ type: 'start_session', mode, languagePreference: langPref, user });
   }
 
@@ -404,6 +372,17 @@ export default function PatientView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation, showEnglish]);
 
+  useEffect(() => {
+    if (!sessionStarted) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      conversationEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      if (conversationRef.current) {
+        conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [conversation, sessionLoading, sessionStarted, showEnglish, translations]);
+
   useEffect(
     () => () => {
       window.clearInterval(cameraTimerRef.current);
@@ -478,21 +457,17 @@ export default function PatientView() {
                   checked={isReturning}
                   onChange={(e) => { setIsReturning(e.target.checked); setUserError(''); }}
                 />
-                I have a VoiceBridge ID (returning patient)
+                I have a CowmunityCare ID (returning patient)
               </label>
               {isReturning ? (
                 <input
                   className="user-id-input"
-                  placeholder="VoiceBridge ID — e.g. VB-0001"
+                  placeholder="CowmunityCare ID — e.g. CC-0001"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                 />
               ) : (
-                <div className="new-user-fields">
-                  <input aria-label="Your name" placeholder="Your name" required value={userName} onChange={(e) => setUserName(e.target.value)} />
-                  <input aria-label="Email address for summary" placeholder="Email address for summary" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <input aria-label="Phone number" placeholder="Phone number" required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                </div>
+                <p className="contact-note">The voice agent will ask for your name, email, and phone first.</p>
               )}
               {userError && <p className="user-error">{userError}</p>}
             </div>
@@ -554,18 +529,18 @@ export default function PatientView() {
           </div>
         )}
 
-        <div className="conversation" aria-live="polite" aria-label="Conversation transcript">
+        <div className="conversation" ref={conversationRef} aria-live="polite" aria-label="Conversation transcript">
           {sessionLoading ? (
             <div className="welcome-bubble">
               <div className="session-loading">
                 <div className="spinner" aria-hidden />
-                Connecting to VoiceBridge…
+                Connecting to CowmunityCare…
               </div>
             </div>
           ) : conversation.length === 0 ? (
             <div className="welcome-bubble">
               {sessionStarted && languagePreference === 'sign_language'
-                ? 'Turn on the camera and sign after each question. VoiceBridge will interpret automatically.'
+                ? 'Turn on the camera and sign after each question. CowmunityCare will interpret automatically.'
                 : sessionStarted
                   ? "You're connected — speech input is active. Speak naturally."
                   : 'Pick a help type, then tap the mic to speak or the camera for sign language.'}
@@ -585,6 +560,7 @@ export default function PatientView() {
               </div>
             ))
           )}
+          <div className="conversation-end" ref={conversationEndRef} aria-hidden />
         </div>
 
         {(socketError || audioError) && (
@@ -613,7 +589,7 @@ export default function PatientView() {
                 <span className="speaking-dot" />
                 <span className="speaking-dot" />
               </span>
-              VoiceBridge is speaking
+              CowmunityCare is speaking
             </>
           )}
         </div>

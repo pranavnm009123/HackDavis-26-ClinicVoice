@@ -401,7 +401,7 @@ export async function createGeminiSession({
 
   const contactContext = userContext
     ? `Start the intake now. Patient contact information was collected before this chat: name=${userContext.name || 'Not provided'}, email=${userContext.email || 'Not provided'}, phone=${userContext.phone || 'Not provided'}. Do not ask for name, email, or phone again unless the patient needs to correct it. When you call finalize_intake, include full_name, contact_email, and contact_phone in structured_fields using this contact information if the patient did not provide different values during the chat.`
-    : 'Hi. Please start by asking for my name.';
+    : 'Hi. Please start my intake by asking for my full name first, then my email address, then my phone number. Ask only one of those questions at a time.';
 
   /* Gemini 3.1 Flash Live: incremental user content during the session should use
      sendRealtimeInput, not sendClientContent (unless seeding history explicitly). */

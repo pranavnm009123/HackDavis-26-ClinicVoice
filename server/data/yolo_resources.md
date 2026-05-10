@@ -1,6 +1,6 @@
-# VoiceBridge Resource Intelligence Base — Yolo County / Davis (demo)
+# CowmunityCare Resource Intelligence Base — Yolo County / Davis (demo)
 
-_This file is ingested by Backboard RAG to ground **resource matching** for VoiceBridge. VoiceBridge is a multilingual **voice-to-casework** system: patients and clients speak naturally; staff receive structured records (transcript, English summary, urgency, red flags, accessibility, next steps, and **matched local resources**). It is **not** a diagnostic tool — it connects people to services and supports staff triage._
+_This file is ingested by Backboard RAG to ground **resource matching** for CowmunityCare. CowmunityCare is a multilingual **voice-to-casework** system: patients and clients speak naturally; staff receive structured records (transcript, English summary, urgency, red flags, accessibility, next steps, and **matched local resources**). It is **not** a diagnostic tool — it connects people to services and supports staff triage._
 
 _Organizations should replace demo entries with verified contacts, hours, and eligibility rules._
 
@@ -11,11 +11,11 @@ _Organizations should replace demo entries with verified contacts, hours, and el
 - **Match on**: stated language, location/zip/county, primary need (medical, housing, food, safety, benefits, disability accommodation), urgency, insurance/cost barriers, transportation limits, household size, interpreter needs, and any **red flags** (chest pain, stroke-like symptoms, suicidal ideation, immediate danger — see Crisis section).
 - **Prefer**: services in **Yolo County** and **Davis** when location is unknown; name the geographic fit in `why`.
 - **Never**: diagnose, prescribe, or tell callers to delay emergency care when symptoms suggest emergency — **escalate** with `911`, **988**, or crisis resources as appropriate.
-- **VoiceBridge modes** map to intake types below: **clinic** (free clinic demo), **shelter**, **food_aid** — use the sections that fit; many clients need **cross-referrals** (e.g. clinic + interpreter + Medi-Cal help).
+- **CowmunityCare modes** map to intake types below: **clinic** (free clinic demo), **shelter**, **food_aid** — use the sections that fit; many clients need **cross-referrals** (e.g. clinic + interpreter + Medi-Cal help).
 
 ---
 
-## VoiceBridge: what staff cards should reflect
+## CowmunityCare: what staff cards should reflect
 
 For each intake, matching should support fields staff expect:
 
@@ -36,7 +36,7 @@ For each intake, matching should support fields staff expect:
 
 | Resource | When to match | Contact / notes |
 |----------|----------------|-----------------|
-| **911** | Life-threatening emergency, suspected heart attack/stroke, severe bleeding, inability to breathe, immediate danger of harm | Tell caller: if emergency, **call 911** or go to nearest ER. VoiceBridge documents; staff follow up. |
+| **911** | Life-threatening emergency, suspected heart attack/stroke, severe bleeding, inability to breathe, immediate danger of harm | Tell caller: if emergency, **call 911** or go to nearest ER. CowmunityCare documents; staff follow up. |
 | **988 Suicide and Crisis Lifeline** | Suicidal thoughts, emotional crisis, substance crisis | **988** (call/text/chat 24/7). |
 | **Empower Yolo** | Domestic violence, sexual assault, stalking, safety planning, advocacy (Yolo County) | **(530) 661-6333** — crisis/advocacy; verify current hours and shelter bed availability on referral. |
 | **County behavioral health / mobile crisis** | Mental health crisis without immediate medical emergency | Direct to **county crisis line** or **988**; org should insert verified local numbers. |
@@ -47,7 +47,7 @@ For each intake, matching should support fields staff expect:
 
 ## Emergency vs. Non-Emergency: Insurance Triage Guide
 
-This section helps VoiceBridge classify whether a patient's situation is a true medical emergency or a non-emergency **before** giving insurance guidance, since the options differ significantly.
+This section helps CowmunityCare classify whether a patient's situation is a true medical emergency or a non-emergency **before** giving insurance guidance, since the options differ significantly.
 
 ### What counts as an emergency?
 Emergency symptoms that require ER care **regardless of insurance**:
@@ -222,7 +222,7 @@ Use this section when a patient asks about specific apartment names, wants to kn
 | **Empower Yolo** | `shelter` / `crisis` | DV shelter, safety planning, legal advocacy | **(530) 661-6333** | Woodland / Yolo | Match when **safety risk**, DV, or need confidential housing. 24/7 crisis line. |
 | **Davis Community Meals and Housing** | `shelter` / `food_bank` | Meals, some housing support services | **(530) 756-4008** | **1111 H St, Davis** | Good for **Davis** unsheltered or food + housing instability. |
 
-**VoiceBridge captures for housing intakes**: housing need type (emergency/general/student), housing status, timeline urgency, family size, **pets**, mobility, budget, city/zip — use these in `why` when matching.
+**CowmunityCare captures for housing intakes**: housing need type (emergency/general/student), housing status, timeline urgency, family size, **pets**, mobility, budget, city/zip — use these in `why` when matching.
 
 **Key distinction**: Use emergency shelter resources (above) for CRITICAL/HIGH urgency only. For MEDIUM/LOW housing needs, use the General Housing and Student Housing section above.
 
@@ -272,7 +272,7 @@ Use these when a patient asks **where to buy** food, groceries, or household sup
 
 ## Disability support and accommodation
 
-VoiceBridge supports users who **cannot easily use forms** (visual, motor, cognitive, language, literacy).
+CowmunityCare supports users who **cannot easily use forms** (visual, motor, cognitive, language, literacy).
 
 | Need | Match types | Guidance |
 |------|-------------|----------|
@@ -297,7 +297,7 @@ For messy walk-in or phone stories, match **navigation**-style resources:
 
 ## Urgency rubric (for consistent matching language)
 
-| Level | Examples | Typical next step in VoiceBridge |
+| Level | Examples | Typical next step in CowmunityCare |
 |-------|----------|----------------------------------|
 | **CRITICAL** | Chest pain, stroke signs, severe bleeding, imminent harm | **911 / ER** + document; EMTALA protects uninsured — they must be treated; follow-up with charity care application |
 | **HIGH** | Severe untreated infection, DV in danger, child safety concern | Crisis line + **same-day** clinical or shelter intake; apply for emergency Medi-Cal retroactively |

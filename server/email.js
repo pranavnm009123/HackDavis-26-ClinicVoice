@@ -106,13 +106,13 @@ export async function sendIntakeConfirmation({ to, name, card, mode, structuredF
     : '';
 
   const info = await t.sendMail({
-    from: '"VoiceBridge" <noreply@voicebridge.care>',
+    from: '"CowmunityCare" <noreply@cowmunitycare.care>',
     to,
-    subject: `Your ${modeLabel} Intake — VoiceBridge Confirmation`,
+    subject: `Your ${modeLabel} Intake — CowmunityCare Confirmation`,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#143329">
         <div style="background:#143329;padding:20px 24px;border-radius:12px 12px 0 0">
-          <h1 style="color:#ffffff;margin:0;font-size:1.4rem">VoiceBridge</h1>
+          <h1 style="color:#ffffff;margin:0;font-size:1.4rem">CowmunityCare</h1>
           <p style="color:#a8c5b0;margin:4px 0 0;font-size:0.9rem">${modeLabel} Intake Confirmation</p>
         </div>
         <div style="background:#f8faf8;padding:24px;border-radius:0 0 12px 12px">
@@ -131,7 +131,7 @@ export async function sendIntakeConfirmation({ to, name, card, mode, structuredF
           ${resourcesHtml}
           <p style="margin-top:24px;color:#4a6b5a">A staff member will follow up with you soon. If your situation becomes urgent, call <strong>911</strong> or go to the nearest emergency room.</p>
           <p style="color:#6b7a74;font-size:0.82rem;margin-top:24px;border-top:1px solid #e0e0e0;padding-top:16px">
-            VoiceBridge &middot; ${modeLabel}<br>
+            CowmunityCare &middot; ${modeLabel}<br>
             This email was sent to ${to} because you provided this address during your intake session.
           </p>
         </div>
@@ -147,19 +147,19 @@ export async function sendResourceEmail({ to, subject, bodyText }) {
     .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" style="color:#1d8f59">$1</a>')
     .replace(/\n/g, '<br>');
   const info = await t.sendMail({
-    from: '"VoiceBridge" <noreply@voicebridge.care>',
+    from: '"CowmunityCare" <noreply@cowmunitycare.care>',
     to,
     subject,
     text: bodyText,
     html: `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#143329">
         <div style="background:#143329;padding:16px 24px;border-radius:12px 12px 0 0">
-          <h2 style="color:#fff;margin:0;font-size:1.2rem">VoiceBridge</h2>
+          <h2 style="color:#fff;margin:0;font-size:1.2rem">CowmunityCare</h2>
         </div>
         <div style="background:#f8faf8;padding:24px;border-radius:0 0 12px 12px;line-height:1.7">
           ${html}
           <p style="color:#6b7a74;font-size:0.82rem;margin-top:32px;border-top:1px solid #e0e0e0;padding-top:16px">
-            VoiceBridge &middot; Sent on request during your intake session
+            CowmunityCare &middot; Sent on request during your intake session
           </p>
         </div>
       </div>
@@ -171,20 +171,20 @@ export async function sendResourceEmail({ to, subject, bodyText }) {
 export async function sendWelcomeEmail({ to, userId, name }) {
   const t = await getTransporter();
   const info = await t.sendMail({
-    from: '"VoiceBridge" <noreply@voicebridge.care>',
+    from: '"CowmunityCare" <noreply@cowmunitycare.care>',
     to,
-    subject: 'Welcome to VoiceBridge — Your Patient ID',
+    subject: 'Welcome to CowmunityCare — Your Patient ID',
     html: `
       <div style="font-family:sans-serif;max-width:540px;margin:0 auto;color:#143329">
-        <h2 style="color:#143329">Welcome to VoiceBridge</h2>
+        <h2 style="color:#143329">Welcome to CowmunityCare</h2>
         <p>Hi ${name || 'there'},</p>
-        <p>Your VoiceBridge patient account has been created. Use your ID for all future visits:</p>
+        <p>Your CowmunityCare patient account has been created. Use your ID for all future visits:</p>
         <div style="background:#e3f0e7;border-radius:12px;padding:20px;text-align:center;margin:24px 0">
           <span style="font-size:2rem;font-weight:700;letter-spacing:0.1em;color:#143329">${userId}</span>
-          <p style="margin:8px 0 0;color:#4a6b5a;font-size:0.9rem">Your VoiceBridge ID</p>
+          <p style="margin:8px 0 0;color:#4a6b5a;font-size:0.9rem">Your CowmunityCare ID</p>
         </div>
         <p>Keep this ID handy — it lets returning patients skip re-registration.</p>
-        <p style="color:#6b7a74;font-size:0.85rem">VoiceBridge · Free Clinic Intake System</p>
+        <p style="color:#6b7a74;font-size:0.85rem">CowmunityCare · Free Clinic Intake System</p>
       </div>
     `,
   });
@@ -207,7 +207,7 @@ export async function sendAppointmentConfirmation({ to, userId, name, appointmen
     'Staff will confirm the time';
   const appointmentReason = appointment.reason || appointment.notes || 'Follow-up from intake';
   const info = await t.sendMail({
-    from: '"VoiceBridge" <noreply@voicebridge.care>',
+    from: '"CowmunityCare" <noreply@cowmunitycare.care>',
     to,
     subject: `Appointment Scheduled — ${appointmentType}`,
     html: `
@@ -224,8 +224,8 @@ export async function sendAppointmentConfirmation({ to, userId, name, appointmen
           <tr><td style="padding:8px 0;color:#4a6b5a;font-weight:600">Urgency</td><td>${appointment.urgency || 'LOW'}</td></tr>
           ${appointment.notes ? `<tr><td style="padding:8px 0;color:#4a6b5a;font-weight:600">Notes</td><td>${appointment.notes}</td></tr>` : ''}
         </table>
-        <p>Please arrive at your scheduled time. Bring your VoiceBridge ID.</p>
-        <p style="color:#6b7a74;font-size:0.85rem">VoiceBridge · Free Clinic Intake System</p>
+        <p>Please arrive at your scheduled time. Bring your CowmunityCare ID.</p>
+        <p style="color:#6b7a74;font-size:0.85rem">CowmunityCare · Free Clinic Intake System</p>
       </div>
     `,
   });

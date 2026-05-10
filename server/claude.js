@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config();
 
-const CARD_SYSTEM_PROMPT = `You are a case intake processor for VoiceBridge, a multilingual intake layer for frontline social-good organizations. Given patient or client intake data, produce a concise structured case card for staff. Output only valid JSON matching the schema below. Do not add commentary.
+const CARD_SYSTEM_PROMPT = `You are a case intake processor for CowmunityCare, a multilingual intake layer for frontline social-good organizations. Given patient or client intake data, produce a concise structured case card for staff. Output only valid JSON matching the schema below. Do not add commentary.
 
 {
   "id": "string",

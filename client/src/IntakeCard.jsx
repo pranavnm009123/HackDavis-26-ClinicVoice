@@ -155,7 +155,7 @@ export default function IntakeCard({ card, compact = false, onStatusChange }) {
     : structuredFields.support_contact_name
       ? { name: structuredFields.support_contact_name, relationship: structuredFields.support_contact_relationship, phone: structuredFields.support_contact_phone }
       : null;
-  const summaryForContact = `VoiceBridge intake summary for ${patient.name || structuredFields.full_name || 'patient'}:\n${card.english_summary || ''}\nNext step: ${card.recommended_next_step || ''}\nUrgency: ${level}`;
+  const summaryForContact = `CowmunityCare intake summary for ${patient.name || structuredFields.full_name || 'patient'}:\n${card.english_summary || ''}\nNext step: ${card.recommended_next_step || ''}\nUrgency: ${level}`;
   const terminalStatus = ['reviewed', 'referred', 'resolved'].includes(card.status);
   const patientName = patient.name || structuredFields.full_name || structuredFields.best_contact_method || 'Unknown';
 

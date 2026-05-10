@@ -73,7 +73,7 @@ export async function connectDatabase() {
   }
 
   if (!process.env.MONGODB_URI) {
-    throw new Error('MONGODB_URI is required for VoiceBridge MongoDB storage.');
+    throw new Error('MONGODB_URI is required for CowmunityCare MongoDB storage.');
   }
 
   if (Date.now() < nextConnectionRetryAt) {

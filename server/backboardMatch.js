@@ -26,7 +26,7 @@ function buildIntakePayload(input) {
 }
 
 function buildPromptWithInlineGuide(payload, guideBlock) {
-  return `You are VoiceBridge's resource intelligence layer for frontline nonprofits (free clinics, shelters, food programs).
+  return `You are CowmunityCare's resource intelligence layer for frontline nonprofits (free clinics, shelters, food programs).
 
 GROUNDING: Prefer these curated local entries when they fit. Use web search only to supplement or verify current phone/hours if needed.
 
@@ -57,7 +57,7 @@ Return 3 to 5 matches when reasonable. Never provide medical diagnosis; only ser
 }
 
 function buildPromptForAssistantRag(payload) {
-  return `You are VoiceBridge's resource intelligence layer. Use the nonprofit resource documents attached to this assistant (RAG) as the primary source of truth. Use web search only to verify or supplement current phone numbers, hours, or listings when the documents may be outdated.
+  return `You are CowmunityCare's resource intelligence layer. Use the nonprofit resource documents attached to this assistant (RAG) as the primary source of truth. Use web search only to verify or supplement current phone numbers, hours, or listings when the documents may be outdated.
 
 Intake (JSON):
 ${JSON.stringify(payload, null, 2)}

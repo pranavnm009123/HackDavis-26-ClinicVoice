@@ -59,7 +59,7 @@ function broadcastStaff(payload) {
 
 app.get('/', (_req, res) => {
   res.json({
-    service: 'VoiceBridge',
+    service: 'CowmunityCare',
     status: 'running',
     routes: {
       health: '/health',
@@ -85,7 +85,7 @@ app.get('/health', async (_req, res) => {
 
   res.json({
     ok: true,
-    service: 'VoiceBridge',
+    service: 'CowmunityCare',
     database: storage.getDatabaseStatus(),
     staffClients: staffClients.size,
     intakes: intakeCount,
@@ -397,13 +397,13 @@ try {
   await apptStorage.seedIfEmpty();
   await facilityStorage.seedIfEmpty();
   await doctorStorage.seedIfEmpty();
-  console.log('VoiceBridge MongoDB connected');
+  console.log('CowmunityCare MongoDB connected');
 } catch (error) {
-  console.warn(`VoiceBridge MongoDB unavailable: ${error.message}`);
+  console.warn(`CowmunityCare MongoDB unavailable: ${error.message}`);
 }
 
 server.listen(PORT, () => {
-  console.log(`VoiceBridge server listening on http://localhost:${PORT}`);
+  console.log(`CowmunityCare server listening on http://localhost:${PORT}`);
 });
 
 export { app, server, broadcastStaff };

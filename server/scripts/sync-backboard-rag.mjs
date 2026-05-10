@@ -35,10 +35,10 @@ async function main() {
 
   if (createAssistant || !assistantId) {
     const assistant = await client.createAssistant({
-      name: 'VoiceBridge Resource Intelligence',
-      description: 'RAG-backed nonprofit resource matching for VoiceBridge intakes.',
+      name: 'CowmunityCare Resource Intelligence',
+      description: 'RAG-backed nonprofit resource matching for CowmunityCare intakes.',
       system_prompt:
-        'You are VoiceBridge resource intelligence. Ground recommendations in documents attached to this assistant (nonprofit resource guides). When asked for JSON, respond with only valid JSON — no markdown fences. Never diagnose medical conditions; focus on connecting people to appropriate services and crisis lines when needed.',
+        'You are CowmunityCare resource intelligence. Ground recommendations in documents attached to this assistant (nonprofit resource guides). When asked for JSON, respond with only valid JSON — no markdown fences. Never diagnose medical conditions; focus on connecting people to appropriate services and crisis lines when needed.',
     });
     assistantId = assistant.assistantId;
     console.log('\nCreated assistant. Add to your .env:\n');

@@ -187,7 +187,7 @@ Required:
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
-MONGODB_URI=mongodb://localhost:27017/voicebridge
+MONGODB_URI=mongodb://localhost:27017/cowmunitycare
 ```
 
 Optional Backboard RAG:
@@ -478,7 +478,7 @@ The UI intentionally avoids making AI the lead message. The product promise is u
 - The app can escalate urgent warning signs but does not replace emergency services.
 - ASL interpretation depends on camera quality, lighting, user framing, and model performance.
 - Accessibility implementation still needs real assistive-tech and user testing before deployment.
-- Some backend logs and internal prompts may still use the older VoiceBridge name. The website-facing UI is CowmunityCare.
+- Backend logs, prompts, and website-facing UI use the CowmunityCare name.
 - MongoDB is required for durable storage. Without it, live WebSocket behavior can still run, but persistence will fail.
 
 ---
