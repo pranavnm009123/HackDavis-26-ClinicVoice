@@ -287,7 +287,8 @@ export default function PatientView() {
   }
 
   async function translateMessage(id, text) {
-    if (translations[id]) return;
+    if (translations[id]) return; // 'pending', a result, or an error — don't retry
+    setTranslations((prev) => ({ ...prev, [id]: 'pending' }));
     try {
       const res = await fetch(`http://${window.location.hostname}:3001/translate`, {
         method: 'POST',
@@ -295,10 +296,10 @@ export default function PatientView() {
         body: JSON.stringify({ text }),
       });
       const data = await res.json();
-      if (data.translated) {
-        setTranslations((prev) => ({ ...prev, [id]: data.translated }));
-      }
-    } catch { /* translation fetch failed silently */ }
+      setTranslations((prev) => ({ ...prev, [id]: data.translated || '[Translation unavailable]' }));
+    } catch {
+      setTranslations((prev) => ({ ...prev, [id]: '[Translation unavailable]' }));
+    }
   }
 
   function toggleEnglish() {
@@ -573,10 +574,10 @@ export default function PatientView() {
                 className={message.role === 'user' ? 'bubble patient-bubble' : 'bubble ai-bubble'}
                 key={message.id}
               >
-                {showEnglish && translations[message.id]
+                {showEnglish && translations[message.id] && translations[message.id] !== 'pending'
                   ? renderWithLinks(translations[message.id])
                   : renderWithLinks(message.text)}
-                {showEnglish && !translations[message.id] && (
+                {showEnglish && translations[message.id] === 'pending' && (
                   <span className="translating-indicator">translating…</span>
                 )}
               </div>

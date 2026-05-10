@@ -183,18 +183,29 @@ app.get('/users/:userId', async (req, res) => {
   }
 });
 
+const anthropicClient = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
+
 app.post('/translate', async (req, res) => {
   const { text } = req.body;
   if (!text?.trim()) return res.json({ translated: text });
+  if (!anthropicClient) {
+    console.warn('[translate] ANTHROPIC_API_KEY not set');
+    return res.status(503).json({ error: 'Translation service not configured — set ANTHROPIC_API_KEY' });
+  }
   try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await anthropic.messages.create({
+    const response = await anthropicClient.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
-      messages: [{ role: 'user', content: `Translate to English. Output only the translation, nothing else:\n\n${text}` }],
+      messages: [{
+        role: 'user',
+        content: `Translate the following text to English. The text may be in Hindi (Devanagari script), Hinglish (Hindi words written in English/Latin letters), or mixed Hindi-English. Output only the English translation — nothing else, no explanation:\n\n${text}`,
+      }],
     });
     res.json({ translated: response.content[0].text.trim() });
   } catch (e) {
+    console.error('[translate]', e.message);
     res.status(500).json({ error: e.message });
   }
 });
